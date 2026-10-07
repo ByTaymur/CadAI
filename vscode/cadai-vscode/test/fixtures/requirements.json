@@ -1,0 +1,332 @@
+{
+  "tree": {
+    "active": "Fixture",
+    "label": "Fixture",
+    "file": "",
+    "documents": [
+      {
+        "name": "Fixture",
+        "label": "Fixture",
+        "file": ""
+      }
+    ],
+    "objects": [
+      {
+        "name": "Beam",
+        "label": "Beam",
+        "type": "Part::Box",
+        "visible": true,
+        "dims": {
+          "Height": "10.0 mm",
+          "Length": "100.0 mm",
+          "Width": "20.0 mm"
+        }
+      },
+      {
+        "name": "LBlock",
+        "label": "LBlock",
+        "type": "Part::Feature",
+        "visible": true,
+        "dims": {}
+      },
+      {
+        "name": "CadAI_Analysis_Beam",
+        "label": "CadAI_Analysis_Beam",
+        "type": "Fem::FemAnalysis",
+        "visible": true,
+        "dims": {},
+        "children": [
+          {
+            "name": "CadAI_Analysis_Beam_Solver",
+            "label": "CadAI_Analysis_Beam_Solver",
+            "type": "Fem::FemSolverObjectPython",
+            "visible": true,
+            "dims": {}
+          },
+          {
+            "name": "CadAI_Analysis_Beam_Material",
+            "label": "CadAI_Analysis_Beam_Material",
+            "type": "App::MaterialObjectPython",
+            "visible": true,
+            "dims": {}
+          },
+          {
+            "name": "CadAI_Analysis_Beam_Fixed",
+            "label": "CadAI_Analysis_Beam_Fixed",
+            "type": "Fem::ConstraintFixed",
+            "visible": true,
+            "dims": {}
+          },
+          {
+            "name": "CadAI_Analysis_Beam_Force1",
+            "label": "CadAI_Analysis_Beam_Force1",
+            "type": "Fem::ConstraintForce",
+            "visible": true,
+            "dims": {}
+          },
+          {
+            "name": "CadAI_Analysis_Beam_Mesh",
+            "label": "CadAI_Analysis_Beam_Mesh",
+            "type": "Fem::FemMeshShapeBaseObjectPython",
+            "visible": true,
+            "dims": {
+              "CharacteristicLengthMax": "5.0 mm",
+              "CharacteristicLengthMin": "0.0 mm"
+            }
+          },
+          {
+            "name": "CCX_Results",
+            "label": "CCX_Results",
+            "type": "Fem::FemResultObjectPython",
+            "visible": true,
+            "dims": {}
+          },
+          {
+            "name": "Pipeline_CCX_Results",
+            "label": "Pipeline_CCX_Results",
+            "type": "Fem::FemPostPipeline",
+            "visible": true,
+            "dims": {}
+          },
+          {
+            "name": "ccx_dat_file",
+            "label": "ccx_dat_file",
+            "type": "App::TextDocument",
+            "visible": true,
+            "dims": {}
+          }
+        ]
+      },
+      {
+        "name": "CCX_Results_Mesh",
+        "label": "CCX_Results_Mesh",
+        "type": "Fem::FemMeshObjectPython",
+        "visible": true,
+        "dims": {}
+      },
+      {
+        "name": "Plate",
+        "label": "Plate",
+        "type": "Part::Box",
+        "visible": false,
+        "dims": {
+          "EdgeOffsetX": "10.0 mm",
+          "EdgeOffsetY": "10.0 mm",
+          "Height": "8.0 mm",
+          "HoleDiameter": "6.0 mm",
+          "Length": "80.0 mm",
+          "Width": "60.0 mm"
+        }
+      },
+      {
+        "name": "Plate_Drill1",
+        "label": "Plate_Drill1",
+        "type": "Part::Cylinder",
+        "visible": false,
+        "dims": {
+          "Angle": "360.0 deg",
+          "FirstAngle": "0.0 deg",
+          "Height": "10.0 mm",
+          "Radius": "3.0 mm",
+          "SecondAngle": "0.0 deg"
+        }
+      },
+      {
+        "name": "Plate_Holes1",
+        "label": "Plate_Holes1",
+        "type": "Part::Cut",
+        "visible": false,
+        "dims": {}
+      },
+      {
+        "name": "Plate_Drill2",
+        "label": "Plate_Drill2",
+        "type": "Part::Cylinder",
+        "visible": false,
+        "dims": {
+          "Angle": "360.0 deg",
+          "FirstAngle": "0.0 deg",
+          "Height": "10.0 mm",
+          "Radius": "3.0 mm",
+          "SecondAngle": "0.0 deg"
+        }
+      },
+      {
+        "name": "Plate_Holes2",
+        "label": "Plate_Holes2",
+        "type": "Part::Cut",
+        "visible": false,
+        "dims": {}
+      },
+      {
+        "name": "Plate_Drill3",
+        "label": "Plate_Drill3",
+        "type": "Part::Cylinder",
+        "visible": false,
+        "dims": {
+          "Angle": "360.0 deg",
+          "FirstAngle": "0.0 deg",
+          "Height": "10.0 mm",
+          "Radius": "3.0 mm",
+          "SecondAngle": "0.0 deg"
+        }
+      },
+      {
+        "name": "Plate_Holes3",
+        "label": "Plate_Holes3",
+        "type": "Part::Cut",
+        "visible": false,
+        "dims": {}
+      },
+      {
+        "name": "Plate_Drill4",
+        "label": "Plate_Drill4",
+        "type": "Part::Cylinder",
+        "visible": false,
+        "dims": {
+          "Angle": "360.0 deg",
+          "FirstAngle": "0.0 deg",
+          "Height": "10.0 mm",
+          "Radius": "3.0 mm",
+          "SecondAngle": "0.0 deg"
+        }
+      },
+      {
+        "name": "Plate_Holes4",
+        "label": "Plate · 4 delik",
+        "type": "Part::Cut",
+        "visible": true,
+        "dims": {}
+      },
+      {
+        "name": "CadAI_DesignRequirements",
+        "label": "CadAI · Tasarım şartları",
+        "type": "App::FeaturePython",
+        "visible": true,
+        "dims": {}
+      }
+    ]
+  },
+  "report": {
+    "status": "fail",
+    "document": "Fixture",
+    "count": 3,
+    "failed": 1,
+    "partial": false,
+    "checks": [
+      {
+        "id": "Delik_sayisi",
+        "status": "pass",
+        "unit": "count",
+        "operator": "eq",
+        "tolerance": 0,
+        "measured": 4,
+        "expected": 4,
+        "deviation": 0,
+        "evidence": {
+          "object": "Plate_Holes4",
+          "metric": "hole_count",
+          "axis": "z",
+          "faces": [
+            "Face7",
+            "Face8",
+            "Face9",
+            "Face10"
+          ],
+          "recognized_holes": 4
+        }
+      },
+      {
+        "id": "Delik_capi",
+        "status": "fail",
+        "unit": "mm",
+        "operator": "eq",
+        "tolerance": 0.01,
+        "measured": [
+          6.0,
+          6.0,
+          6.0,
+          6.0
+        ],
+        "expected": 8,
+        "deviation": -2.0,
+        "evidence": {
+          "object": "Plate_Holes4",
+          "metric": "hole_diameter",
+          "axis": "z",
+          "faces": [
+            "Face7",
+            "Face8",
+            "Face9",
+            "Face10"
+          ],
+          "recognized_holes": 4
+        }
+      },
+      {
+        "id": "Kenar_uzakligi",
+        "status": "pass",
+        "unit": "mm",
+        "operator": "eq",
+        "tolerance": 0.01,
+        "measured": [
+          10.0,
+          10.0,
+          10.0,
+          10.0
+        ],
+        "expected": 10,
+        "deviation": 0.0,
+        "evidence": {
+          "object": "Plate_Holes4",
+          "metric": "hole_edge_offset",
+          "axis": "z",
+          "faces": [
+            "Face7",
+            "Face8",
+            "Face9",
+            "Face10"
+          ],
+          "recognized_holes": 4,
+          "edge_axis": "x"
+        }
+      }
+    ],
+    "requirements": [
+      {
+        "id": "Delik_sayisi",
+        "measure": {
+          "object": "Plate",
+          "metric": "hole_count",
+          "axis": "z"
+        },
+        "operator": "eq",
+        "value": 4,
+        "tolerance": 0
+      },
+      {
+        "id": "Delik_capi",
+        "measure": {
+          "object": "Plate",
+          "metric": "hole_diameter",
+          "axis": "z"
+        },
+        "operator": "eq",
+        "value": 8,
+        "tolerance": 0.01
+      },
+      {
+        "id": "Kenar_uzakligi",
+        "measure": {
+          "object": "Plate",
+          "metric": "hole_edge_offset",
+          "axis": "z",
+          "edge_axis": "x"
+        },
+        "operator": "eq",
+        "value": 10,
+        "tolerance": 0.01
+      }
+    ]
+  }
+}

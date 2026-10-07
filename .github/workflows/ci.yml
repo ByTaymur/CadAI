@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/ruff-action@v3
+        with:
+          args: check freecad vscode/cadai-vscode/test
+
+  mcp-server:
+    # the MCP server is standard-library only and must run on any Python 3.9+
+    strategy:
+      matrix:
+        python: ["3.9", "3.11", "3.13"]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m unittest freecad/CadAI/tests/test_mcp_server.py -v
+
+  extension:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: vscode/cadai-vscode
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: vscode/cadai-vscode/package-lock.json
+      - run: npm ci
+      - run: for f in extension.js agents.js bridge.js freecad.js mcp_setup.js media/controls.js; do node --check "$f"; done
+      - run: npm test
+      - name: Viewer end-to-end (headless Chrome, WebGL via SwiftShader)
+        run: npm run test:viewer
+        env:
+          CADAI_BROWSER: chrome
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: viewer-screenshots
+          path: vscode/cadai-vscode/test/out/
+      - name: Package VSIX
+        run: python build_vsix.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cadai-vsix
+          path: vscode/cadai-vscode/dist/cadai-latest.vsix
+
+  freecad:
+    # real FreeCAD + Gmsh + CalculiX (the official portable build ships all three)
+    runs-on: windows-latest
+    env:
+      FREECAD_VERSION: "1.1.4"
+      FREECAD_ASSET: FreeCAD_1.1.4-Windows-x86_64-py311.7z
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache FreeCAD
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/fc
+          key: freecad-${{ env.FREECAD_ASSET }}
+      - name: Download and verify FreeCAD
+        if: steps.cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          $base = "https://github.com/FreeCAD/FreeCAD/releases/download/$env:FREECAD_VERSION"
+          Invoke-WebRequest "$base/$env:FREECAD_ASSET" -OutFile fc.7z
+          $expected = ((Invoke-WebRequest "$base/$env:FREECAD_ASSET-SHA256.txt").Content -split '\s+')[0].ToLower()
+          $actual = (Get-FileHash fc.7z -Algorithm SHA256).Hash.ToLower()
+          if ($expected -ne $actual) { throw "SHA256 mismatch: $actual != $expected" }
+          7z x -y "-o${{ runner.temp }}\fc" fc.7z | Out-Null
+      - name: FreeCAD tests (tools, FEM, DFM, recipes, bridge, MCP)
+        shell: pwsh
+        env:
+          FREECAD_USER_HOME: ${{ runner.temp }}\fchome
+        run: |
+          $bin = (Get-ChildItem "${{ runner.temp }}\fc" -Directory | Select-Object -First 1).FullName + "\bin"
+          $out = & "$bin\freecadcmd.exe" freecad\CadAI\tests\run_tests.py 2>&1 | Out-String
+          Write-Output $out
+          if ($out -notmatch "ALL PASSED") { throw "FreeCAD tests failed" }

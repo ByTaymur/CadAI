@@ -1,0 +1,58 @@
+<div id="toolbar">
+  <span class="group">
+    <button id="mSelect" class="mode" title="Seç (S / Esc)">Seç</button>
+  </span>
+  <span class="group" title="Göster ve tarif et">
+    <button id="mMark" class="mode" title="İşaret (M): noktaya tıkla, ne istediğini yaz">📍 İşaret</button>
+    <button id="mMeasure" class="mode" title="Ölçü (D): iki noktaya tıkla">📏 Ölçü</button>
+    <button id="mLine" class="mode" title="Çizgi (L): noktalara tıkla, Enter ya da çift tık ile bitir">╱ Çizgi</button>
+    <button id="mCircle" class="mode" title="Daire (C): merkeze tıkla, sonra yarıçap kadar uzağa tıkla">◯ Daire</button>
+    <button id="mPen" class="mode" title="Kalem (P): yüzeyin üzerinde basılı tutup çiz">✎ Kalem</button>
+  </span>
+  <span class="group">
+    <button id="vFit" title="Sığdır (F)">Sığdır</button>
+    <button id="vIso">İzo</button>
+    <button id="vTop">Üst</button>
+    <button id="vFront">Ön</button>
+    <button id="vRight">Sağ</button>
+    <button id="vEdges">Kenarlar</button>
+    <button id="vMarkers">İşaretler</button>
+    <button id="vSection" class="mode" title="Kesit görünümü (X): X → Y → Z → kapalı">Kesit</button>
+  </span>
+  <span class="group">
+    <button id="vUndo" title="Ctrl+Z">↶</button>
+    <button id="vRedo" title="Ctrl+Y">↷</button>
+  </span>
+</div>
+<div id="hint"></div>
+<div id="info"></div>
+<div id="sectionBox" class="panel hidden">
+  <label for="sectionPos">Kesit konumu</label>
+  <input type="range" id="sectionPos" min="0" max="1000" value="500">
+</div>
+<div id="resultBox" class="panel hidden">
+  <div class="rhead"><b id="rTitle"></b><button id="rClose" title="Sonucu kapat, modele dön (Esc)">Kapat ✕</button></div>
+  <div class="row">
+    <button id="rVM" class="mode">von Mises</button>
+    <button id="rDisp" class="mode">Yer değiştirme</button>
+  </div>
+  <div class="legend"><canvas id="rBar" width="18" height="180"></canvas><div id="rTicks"></div></div>
+  <div class="muted" id="rStats"></div>
+  <label class="check"><input type="checkbox" id="rClamp" checked> Renk ölçeğini %99'da kırp (tekillikler)</label>
+  <label for="rScale">Şekil değiştirme <span id="rScaleText"></span></label>
+  <input type="range" id="rScale" min="0" max="100" value="50">
+</div>
+<div id="hBox" class="panel hidden">
+  <div class="rhead"><b>DFM bulguları</b><button id="hClear" title="Vurguları temizle">✕</button></div>
+  <div class="muted" id="hText"></div>
+  <div class="muted"><span class="sw err"></span> hata &nbsp; <span class="sw warn"></span> uyarı</div>
+</div>
+<form id="noteForm" class="hidden" autocomplete="off">
+  <div id="noteTitle"></div>
+  <input id="noteInput" placeholder="Burada ne değişsin?">
+  <div class="row"><button type="submit" class="primary">Kaydet</button><button type="button" id="noteCancel">İptal</button></div>
+</form>
+<div id="overlay"><div>FreeCAD'e bağlı değil.</div><button class="primary" id="vStart">FreeCAD'i başlat</button></div>
+<div id="glNotice" class="hidden"><div id="glText"></div>
+  <div class="row"><button class="primary" id="glReload">Görünümü yeniden yükle</button><button id="glDiag">GPU tanılaması</button></div>
+</div>

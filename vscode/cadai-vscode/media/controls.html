@@ -1,0 +1,210 @@
+<div class="status"><span id="dot" class="dot"></span><span id="connText">Bağlanıyor…</span></div>
+<div class="row" id="connRow">
+  <button class="primary" data-command="cadai.startFreeCAD">FreeCAD'i başlat</button>
+</div>
+
+<div id="main" class="hidden">
+<details open>
+  <summary>Belge</summary>
+  <div class="muted" id="docInfo">—</div>
+  <div class="row">
+    <button data-command="cadai.newDocument">Yeni</button>
+    <button data-command="cadai.openDocument">Aç</button>
+    <button data-command="cadai.saveDocument">Kaydet</button>
+    <button data-command="cadai.saveDocumentAs">Farklı kaydet</button>
+  </div>
+  <div class="row">
+    <button data-command="cadai.undo">↶ Geri al</button>
+    <button data-command="cadai.redo">↷ Yinele</button>
+    <button data-command="cadai.recompute">⟳ Hesapla</button>
+    <button class="primary" data-command="cadai.openViewer">3B görünüm</button>
+  </div>
+</details>
+
+<details open>
+  <summary>İşaretler — göster ve tarif et</summary>
+  <div class="muted">Parçanın üzerinde gösterin, ne istediğinizi yazın: nokta, ölçü, çizgi, daire ya da serbest kalem.</div>
+  <div class="row">
+    <button data-mode="mark">📍 İşaret</button>
+    <button data-mode="measure">📏 Ölçü</button>
+    <button data-mode="line">╱ Çizgi</button>
+    <button data-mode="circle">◯ Daire</button>
+    <button data-mode="pen">✎ Kalem</button>
+  </div>
+  <ul class="list" id="markerList"></ul>
+  <div class="row">
+    <button class="primary" id="markersToAI">Yapay zekâya uygulat</button>
+    <button id="markersClear">Tümünü sil</button>
+  </div>
+</details>
+
+<details open>
+  <summary>Seçim</summary>
+  <div class="muted">3B görünümde yüze tıklayın (Ctrl ile çoklu seçim).</div>
+  <ul class="list" id="selList"></ul>
+  <div class="row">
+    <button id="selClear">Temizle</button>
+    <button data-command="cadai.measureSelection">Ölç</button>
+  </div>
+  <div class="result hidden" id="measure"></div>
+</details>
+
+<details open>
+  <summary>Tasarım şartları</summary>
+  <div class="muted" id="reqStatus" role="status" aria-live="polite">Belge açıldığında denetlenir.</div>
+  <div class="row">
+    <button id="reqCheck">Şimdi denetle</button><button id="reqAdd">Şart ekle</button>
+    <button id="reqExport">Rapor kaydet</button><button id="reqLink">Ölçüleri bağla</button>
+  </div>
+  <ul class="list" id="reqList"></ul>
+  <form id="reqForm" class="hidden">
+    <div class="grid">
+      <label for="reqId">Şart adı</label><input id="reqId" maxlength="64" required placeholder="ör. kapak_boslugu">
+      <label for="reqObject">Parça</label><select id="reqObject" required></select>
+      <label for="reqMetric">Ölçüm</label><select id="reqMetric">
+        <option value="bbox_x">X boyutu (mm)</option><option value="bbox_y">Y boyutu (mm)</option>
+        <option value="bbox_z">Z boyutu (mm)</option><option value="volume">Hacim (mm³)</option>
+        <option value="solid_count">Katı sayısı</option><option value="min_distance">En kısa mesafe (mm)</option>
+        <option value="interference_volume">Çakışma hacmi (mm³)</option><option value="hole_count">Delik sayısı</option>
+        <option value="hole_diameter">Her deliğin çapı (mm)</option><option value="hole_edge_offset">Delik merkezi–sınır uzaklığı (mm)</option>
+      </select>
+      <label for="reqOther" data-req-other>İkinci parça</label><select id="reqOther" data-req-other></select>
+      <label for="reqAxis" data-req-hole>Delik ekseni</label><select id="reqAxis" data-req-hole>
+        <option value="z">Z</option><option value="x">X</option><option value="y">Y</option></select>
+      <label for="reqEdge" data-req-edge>Sınır ekseni</label><select id="reqEdge" data-req-edge>
+        <option value="x">X</option><option value="y">Y</option><option value="z">Z</option></select>
+      <label for="reqOperator">Koşul</label><select id="reqOperator">
+        <option value="eq">Eşit</option><option value="min">En az</option><option value="max">En fazla</option></select>
+      <label for="reqValue" id="reqValueLabel">Hedef</label><input id="reqValue" type="number" step="any" required>
+      <label for="reqTolerance">Tolerans (±)</label><input id="reqTolerance" type="number" step="any" min="0" value="0.01" required>
+      <label for="reqReference">Ölçüye göre hedef</label><select id="reqReference"><option value="">Sabit hedef</option></select>
+      <label for="reqRefMetric" data-req-reference>Referans ölçüm</label><select id="reqRefMetric" data-req-reference>
+        <option value="bbox_x">X boyutu</option><option value="bbox_y">Y boyutu</option><option value="bbox_z">Z boyutu</option>
+        <option value="volume">Hacim</option><option value="solid_count">Katı sayısı</option>
+      </select>
+      <label for="reqFactor" data-req-reference>Çarpan</label><input id="reqFactor" data-req-reference type="number" step="any" value="1">
+    </div>
+    <p class="muted" id="reqHelp">Boyutlar dünya eksenlerinde ölçülür. Tolerans ölçümün birimindedir.</p>
+    <div class="row"><button class="primary" type="submit" id="reqSave">Şartı kaydet</button>
+      <button type="button" id="reqCancel">Vazgeç</button></div>
+  </form>
+</details>
+
+<details open>
+  <summary>Analiz (FEM)</summary>
+  <div class="row">
+    <select id="femType"><option value="static">Statik (gerilme/sehim)</option><option value="frequency">Doğal frekans (modal)</option></select>
+  </div>
+  <div class="grid">
+    <label>Malzeme</label>
+    <select id="femMaterial">
+      <option value="steel">Çelik</option><option value="stainless_steel">Paslanmaz çelik</option>
+      <option value="aluminum">Alüminyum 6061</option><option value="titanium">Titanyum</option>
+      <option value="pla">PLA</option><option value="abs">ABS</option>
+    </select>
+    <label>Mesh boyutu (mm)</label><input type="number" id="femMesh" placeholder="otomatik">
+  </div>
+  <div class="row"><b style="font-size:12px">Sabit yüzler</b><button id="addFixed">Seçimi ekle</button></div>
+  <ul class="list" id="fixedList"></ul>
+  <div id="loadBox">
+    <div class="row"><b style="font-size:12px">Kuvvet yüzleri</b><button id="addLoaded">Seçimi ekle</button></div>
+    <ul class="list" id="loadedList"></ul>
+    <div class="grid">
+      <label>Kuvvet (N)</label><input type="number" id="femForce" value="500">
+      <label>Yön</label>
+      <select id="femDir">
+        <option value="0,0,-1">−Z (aşağı)</option><option value="0,0,1">+Z (yukarı)</option>
+        <option value="1,0,0">+X</option><option value="-1,0,0">−X</option>
+        <option value="0,1,0">+Y</option><option value="0,-1,0">−Y</option>
+      </select>
+    </div>
+  </div>
+  <div class="row"><button class="primary" id="femRun">Analizi çalıştır</button>
+    <button id="femShow" title="Son çözümün gerilme/yer değiştirme renk haritası">3B'de renk haritası</button></div>
+  <div class="muted" id="femStatus"></div>
+  <div class="result hidden" id="femResult"></div>
+</details>
+
+<details open>
+  <summary>Üretilebilirlik (DFM)</summary>
+  <div class="muted">Seçili parçayı (yoksa ilk görünür parçayı) ölçerek denetler; bulgular 3B görünümde boyanır.</div>
+  <div class="row">
+    <select id="dfmProcess">
+      <option value="fdm">FDM 3B baskı</option><option value="cnc">3 eksen CNC</option>
+      <option value="injection_molding">Plastik enjeksiyon</option><option value="sheet_metal">Sac metal</option>
+    </select>
+    <button class="primary" id="dfmRun">Denetle</button>
+  </div>
+  <div class="muted" id="dfmStatus"></div>
+  <ul class="list hidden" id="dfmList"></ul>
+</details>
+
+<details open>
+  <summary>Tasarım geçmişi (git)</summary>
+  <div class="muted">İsteğe bağlı: her değişiklik otomatik bir git commit'i ve bir not olur; klasör Obsidian'da
+    kasa olarak açılabilir. Asıl dosyanıza ve proje deponuza dokunulmaz.</div>
+  <div class="row">
+    <button class="primary" id="histBtn">● Geçmişi aç</button>
+    <button data-command="cadai.history.show">Geçmiş ağacı</button>
+    <button data-command="cadai.history.openVault">Obsidian'da aç</button>
+  </div>
+  <div class="muted" id="histStatus">—</div>
+</details>
+
+<details>
+  <summary>Standart parçalar (step.parts)</summary>
+  <div class="muted">16 000+ açık STEP parça: cıvata, somun, rulman, profil, motor… Seçili yüz varsa oraya eklenir.</div>
+  <form class="row" id="partsForm"><input id="partsQuery" placeholder="ör. M8x20 cıvata, 608 rulman, 2020 profil" style="flex:1">
+    <button class="primary" type="submit">Ara</button></form>
+  <div class="muted" id="partsStatus"></div>
+  <ul class="list" id="partsList"></ul>
+</details>
+
+<details>
+  <summary>Dışa aktar</summary>
+  <div class="row">
+    <button data-command="cadai.exportStep">STEP</button>
+    <button data-command="cadai.exportStl">STL</button>
+    <button data-command="cadai.technicalDrawing" title="Seçili (ya da ilk görünür) parçanın A3 teknik resmi: görünüşler, kesit, ölçüler, antet">Teknik resim (PDF)</button>
+    <button data-command="cadai.render" title="Gerçekçi görsel: Blender Cycles (ekran kartında) ya da yerleşik hızlı render">Render</button>
+  </div>
+</details>
+
+<details>
+  <summary>Render ve diğer programlar</summary>
+  <div class="muted">Blender ile gerçekçi render; OpenSCAD, build123d/CadQuery ve KiCad dosyaları doğrudan modele katı
+    olarak gelir. Programlar arka planda, penceresiz çalışır.</div>
+  <div class="row">
+    <button class="primary" data-command="cadai.render">Render</button>
+    <button data-command="cadai.importCode" title=".scad, build123d/CadQuery .py ya da KiCad .kicad_pcb">Dosyadan aktar</button>
+    <button data-command="cadai.externalTools" title="Hangi programlar kurulu; eksikleri kur ya da yolunu ayarla">Kurulum…</button>
+  </div>
+  <ul class="list" id="extList"><li class="muted"><span>FreeCAD bağlanınca denetlenir.</span></li></ul>
+</details>
+
+<details open>
+  <summary>Yapay zekâ</summary>
+  <div class="grid">
+    <label>Ajan</label>
+    <select id="agentSel" title="Hangi pencereden çalışıyorsanız onu seçin"></select>
+  </div>
+  <div class="muted" id="agentHint">Hepsi aynı <b>cadai-freecad</b> araçlarıyla modeli görür, işaretlerinizi okur ve düzenler.</div>
+  <div class="row">
+    <button class="primary" data-command="cadai.openAI">Ajanı aç</button>
+    <button data-command="cadai.markersToAI">İşaretleri gönder</button>
+  </div>
+</details>
+
+<details>
+  <summary>Geliştirici</summary>
+  <div class="row">
+    <button data-command="cadai.runTests">Testleri çalıştır</button>
+    <button data-command="cadai.reloadAddon">Eklentiyi yeniden yükle</button>
+  </div>
+  <div class="row">
+    <button data-command="cadai.gpuDiagnostics">GPU / performans</button>
+    <button data-command="cadai.attachDebugger">Hata ayıklayıcıyı bağla</button>
+    <button data-command="cadai.showFreeCAD">FreeCAD penceresini göster</button>
+  </div>
+</details>
+</div>

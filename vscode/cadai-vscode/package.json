@@ -1,0 +1,584 @@
+{
+  "name": "cadai",
+  "displayName": "CadAI — FreeCAD + Yapay Zekâ",
+  "description": "Point at your FreeCAD part in VS Code, describe the change, and let any AI agent (Claude Code, Codex, Cline, Kilo, Copilot) do it. 3D view, markers, FEM with color maps, DFM checks, 16k standard parts, MCP.",
+  "version": "0.16.2",
+  "publisher": "taymur",
+  "license": "LGPL-2.1-or-later",
+  "icon": "media/icon.png",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Visualization",
+    "AI"
+  ],
+  "keywords": [
+    "freecad",
+    "cad",
+    "3d",
+    "mcp",
+    "ai",
+    "fem",
+    "dfm",
+    "step",
+    "calculix",
+    "claude",
+    "codex",
+    "cline",
+    "copilot"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "cadai",
+          "title": "CadAI",
+          "icon": "media/cadai-activity.svg"
+        }
+      ]
+    },
+    "views": {
+      "cadai": [
+        {
+          "type": "webview",
+          "id": "cadai.controls",
+          "name": "Kontrol"
+        },
+        {
+          "id": "cadai.tree",
+          "name": "Model ağacı"
+        },
+        {
+          "id": "cadai.historyTree",
+          "name": "Tasarım geçmişi"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "cadai.historyTree",
+        "contents": "FreeCAD kapalı.\n[FreeCAD'i başlat](command:cadai.startFreeCAD)",
+        "when": "!cadai.connected"
+      },
+      {
+        "view": "cadai.historyTree",
+        "contents": "Otomatik tasarım geçmişi kapalı.\nAçınca modeldeki her değişiklik (yapay zekâ, VS Code ya da FreeCAD'de elle) ayrı bir git commit'i ve Obsidian notu olur. Asıl dosyanıza dokunulmaz, hiçbir şey dışarı gönderilmez.\n[Geçmişi aç](command:cadai.history.enable)",
+        "when": "cadai.connected && !cadai.historyEnabled"
+      },
+      {
+        "view": "cadai.historyTree",
+        "contents": "Açık belge yok.\n[Yeni belge](command:cadai.newDocument)",
+        "when": "cadai.connected && cadai.historyEnabled && !cadai.hasDocument"
+      },
+      {
+        "view": "cadai.historyTree",
+        "contents": "Geçmiş açık. Bu belgede yapılan ilk değişiklik burada görünecek.\n[Geçmişi durdur](command:cadai.history.disable)",
+        "when": "cadai.connected && cadai.historyEnabled && cadai.hasDocument"
+      }
+    ],
+    "commands": [
+      {
+        "command": "cadai.startFreeCAD",
+        "title": "FreeCAD'i başlat",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.setupFreeCAD",
+        "title": "FreeCAD eklentisini kur / güncelle",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.connectAgents",
+        "title": "Yapay zekâ ajanlarına bağla (Claude Code, Codex, Cline, Kilo, Copilot)",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.showFreeCAD",
+        "title": "FreeCAD penceresini göster",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.openViewer",
+        "title": "3B görünümü aç",
+        "category": "CadAI",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "cadai.newDocument",
+        "title": "Yeni belge",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.openDocument",
+        "title": "Dosya aç (FCStd/STEP/STL)",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.saveDocument",
+        "title": "Kaydet",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.saveDocumentAs",
+        "title": "Farklı kaydet",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.undo",
+        "title": "Geri al",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.redo",
+        "title": "Yinele",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.recompute",
+        "title": "Yeniden hesapla",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.addPrimitive",
+        "title": "Şekil ekle",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.measureSelection",
+        "title": "Seçimi ölç",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.showFemResult",
+        "title": "FEM sonucunu 3B görünümde renk haritası olarak göster",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.dfmCheck",
+        "title": "Üretilebilirlik denetimi (DFM: 3B baskı, CNC, enjeksiyon, sac)",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.searchParts",
+        "title": "Standart parça ekle (step.parts: cıvata, rulman, profil…)",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.exportStep",
+        "title": "STEP olarak dışa aktar",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.exportStl",
+        "title": "STL olarak dışa aktar",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.technicalDrawing",
+        "title": "Teknik resim (A3 PDF, Türkçe antet)",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.render",
+        "title": "Render: gerçekçi görsel (Blender) ya da hızlı render",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.importCode",
+        "title": "OpenSCAD / build123d / CadQuery / KiCad dosyasını modele aktar",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.externalTools",
+        "title": "Harici araçlar: Blender, OpenSCAD, KiCad, build123d (durum ve kurulum)",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.history.toggle",
+        "title": "Otomatik tasarım geçmişi: aç / kapat (her değişiklik bir git commit'i)",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.history.enable",
+        "title": "Tasarım geçmişini aç (kaydetmeye başla)",
+        "category": "CadAI",
+        "icon": "$(record)"
+      },
+      {
+        "command": "cadai.history.disable",
+        "title": "Tasarım geçmişini durdur",
+        "category": "CadAI",
+        "icon": "$(debug-pause)"
+      },
+      {
+        "command": "cadai.history.show",
+        "title": "Tasarım geçmişi ağacını göster",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.history.refresh",
+        "title": "Yenile",
+        "category": "CadAI",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "cadai.history.openVault",
+        "title": "Tasarım geçmişini Obsidian'da aç",
+        "category": "CadAI",
+        "icon": "$(book)"
+      },
+      {
+        "command": "cadai.history.openVersion",
+        "title": "Bu sürümü yeni belge olarak aç",
+        "category": "CadAI",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "cadai.history.openNote",
+        "title": "Notu aç",
+        "category": "CadAI",
+        "icon": "$(note)"
+      },
+      {
+        "command": "cadai.history.copyCommit",
+        "title": "Commit kimliğini kopyala",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.history.selectObject",
+        "title": "Modelde seç",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.openAI",
+        "title": "Yapay zekâ ajanını aç",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.chooseAgent",
+        "title": "Yapay zekâ ajanını seç (Claude Code, Codex, Cline, Kilo…)",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.markersToAI",
+        "title": "İşaretleri yapay zekâya gönder",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.gpuDiagnostics",
+        "title": "GPU ve performans tanılaması (ekran kartı doğru kullanılıyor mu?)",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.runTests",
+        "title": "Eklenti testlerini çalıştır",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.reloadAddon",
+        "title": "FreeCAD eklentisini yeniden yükle",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.attachDebugger",
+        "title": "Hata ayıklayıcıyı FreeCAD'e bağla",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.tree.refresh",
+        "title": "Yenile",
+        "category": "CadAI",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "cadai.tree.select",
+        "title": "Seç",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.tree.editDimension",
+        "title": "Ölçü düzenle",
+        "category": "CadAI",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "cadai.tree.toggleVisibility",
+        "title": "Göster/Gizle",
+        "category": "CadAI",
+        "icon": "$(eye-closed)"
+      },
+      {
+        "command": "cadai.tree.delete",
+        "title": "Sil",
+        "category": "CadAI",
+        "icon": "$(trash)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "cadai.tree.refresh",
+          "when": "view == cadai.tree",
+          "group": "navigation"
+        },
+        {
+          "command": "cadai.openViewer",
+          "when": "view == cadai.tree",
+          "group": "navigation"
+        },
+        {
+          "command": "cadai.history.enable",
+          "when": "view == cadai.historyTree && cadai.connected && !cadai.historyEnabled",
+          "group": "navigation@1"
+        },
+        {
+          "command": "cadai.history.disable",
+          "when": "view == cadai.historyTree && cadai.connected && cadai.historyEnabled",
+          "group": "navigation@1"
+        },
+        {
+          "command": "cadai.history.refresh",
+          "when": "view == cadai.historyTree && cadai.connected",
+          "group": "navigation@2"
+        },
+        {
+          "command": "cadai.history.openVault",
+          "when": "view == cadai.historyTree && cadai.connected",
+          "group": "navigation@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "cadai.tree.editDimension",
+          "when": "view == cadai.tree && viewItem == cadaiObjectDims",
+          "group": "inline"
+        },
+        {
+          "command": "cadai.tree.toggleVisibility",
+          "when": "view == cadai.tree && viewItem =~ /cadaiObject/",
+          "group": "inline"
+        },
+        {
+          "command": "cadai.tree.editDimension",
+          "when": "view == cadai.tree && viewItem == cadaiObjectDims",
+          "group": "1_edit"
+        },
+        {
+          "command": "cadai.tree.toggleVisibility",
+          "when": "view == cadai.tree && viewItem =~ /cadaiObject/",
+          "group": "1_edit"
+        },
+        {
+          "command": "cadai.tree.delete",
+          "when": "view == cadai.tree && viewItem =~ /cadaiObject/",
+          "group": "2_danger"
+        },
+        {
+          "command": "cadai.history.openNote",
+          "when": "view == cadai.historyTree && viewItem == cadaiCommitNote",
+          "group": "inline"
+        },
+        {
+          "command": "cadai.history.openVersion",
+          "when": "view == cadai.historyTree && viewItem =~ /^cadaiCommit/",
+          "group": "inline"
+        },
+        {
+          "command": "cadai.history.openVersion",
+          "when": "view == cadai.historyTree && viewItem =~ /^cadaiCommit/",
+          "group": "1_open@1"
+        },
+        {
+          "command": "cadai.history.openNote",
+          "when": "view == cadai.historyTree && viewItem == cadaiCommitNote",
+          "group": "1_open@2"
+        },
+        {
+          "command": "cadai.history.copyCommit",
+          "when": "view == cadai.historyTree && viewItem =~ /^cadaiCommit/",
+          "group": "2_copy"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "cadai.history.openVersion",
+          "when": "false"
+        },
+        {
+          "command": "cadai.history.openNote",
+          "when": "false"
+        },
+        {
+          "command": "cadai.history.copyCommit",
+          "when": "false"
+        },
+        {
+          "command": "cadai.history.selectObject",
+          "when": "false"
+        },
+        {
+          "command": "cadai.history.refresh",
+          "when": "false"
+        },
+        {
+          "command": "cadai.history.enable",
+          "when": "!cadai.historyEnabled"
+        },
+        {
+          "command": "cadai.history.disable",
+          "when": "cadai.historyEnabled"
+        },
+        {
+          "command": "cadai.tree.select",
+          "when": "false"
+        },
+        {
+          "command": "cadai.tree.editDimension",
+          "when": "false"
+        },
+        {
+          "command": "cadai.tree.toggleVisibility",
+          "when": "false"
+        },
+        {
+          "command": "cadai.tree.delete",
+          "when": "false"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "CadAI",
+      "properties": {
+        "cadai.freecadPath": {
+          "type": "string",
+          "scope": "machine",
+          "default": "",
+          "description": "FreeCAD programının yolu. Boş bırakılırsa otomatik bulunur (Windows, macOS, Linux)."
+        },
+        "cadai.addonPath": {
+          "type": "string",
+          "scope": "machine",
+          "default": "",
+          "description": "Yalnızca geliştiriciler için: CadAI FreeCAD eklentisinin kaynak klasörü (testler ve hata ayıklama). Boşsa FreeCAD'e kurulu kopya kullanılır."
+        },
+        "cadai.minimizeFreeCAD": {
+          "type": "boolean",
+          "default": true,
+          "description": "FreeCAD VS Code'dan başlatılınca penceresini simge durumuna küçült (her şey VS Code'dan yönetilir)."
+        },
+        "cadai.autoStartFreeCAD": {
+          "type": "boolean",
+          "default": false,
+          "description": "VS Code açılınca FreeCAD'i otomatik başlat."
+        },
+        "cadai.meshQuality": {
+          "type": "number",
+          "default": 1,
+          "minimum": 0.2,
+          "maximum": 5,
+          "description": "3B görünüm üçgenleme kalitesi (büyük = daha düzgün, daha yavaş)."
+        },
+        "cadai.mcp.toolset": {
+          "type": "string",
+          "default": "full",
+          "enum": ["full", "small", "small+fem+drawing", "small+all"],
+          "enumDescriptions": [
+            "Tüm araçlar, ayrıntılı açıklamalar (Claude, GPT, büyük modeller).",
+            "Küçük yerel modeller (7-14B, ör. Ollama ile Cline): ~20 araç, kısa açıklama ve şema; kodsuz modelleme araçları, parça kataloğu, dışa aktarma.",
+            "small + FEM ve teknik resim.",
+            "Kısa açıklamalarla bütün araçlar."
+          ],
+          "markdownDescription": "Ajanlara (MCP) gönderilen araç seti. Küçük yerel modeller 30 araç ve uzun açıklamalarla şaşırır; `small` kısa bir liste ve kısa talimat gönderir. Değiştirdikten sonra **CadAI: Yapay zekâ ajanlarına bağla** komutunu yeniden çalıştırın."
+        },
+        "cadai.gpuCheck": {
+          "type": "boolean",
+          "default": true,
+          "description": "FreeCAD bağlanınca bir kez denetle: FreeCAD ve 3B görünüm en güçlü ekran kartını kullanıyor mu (AMD, NVIDIA, Intel…)? Sorun varsa bir kez uyarır."
+        },
+        "cadai.history.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "İsteğe bağlı otomatik tasarım geçmişi: modeldeki her değişiklik (yapay zekâ, VS Code ya da FreeCAD'de elle) ayrı bir klasörde git commit'i ve Obsidian uyumlu Markdown notu olur. Asıl .FCStd dosyasına dokunulmaz, hiçbir şey uzağa gönderilmez (push yok)."
+        },
+        "cadai.history.folder": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "description": "Geçmiş klasörü. Boşsa her belgenin yanında '<Belge>.cadai-history' (kendi git deposu). Bir git deposunun içindeyse yalnızca bu klasör commit'lenir."
+        },
+        "cadai.history.useWorkspace": {
+          "type": "boolean",
+          "default": false,
+          "description": "Geliştiriciler için: geçmişi açık çalışma alanındaki 'cadai-history/' klasörüne yaz; çalışma alanı bir git deposuysa commit'ler o depoya gider (yalnızca bu klasör, diğer hazırlanmış değişikliklere dokunulmaz)."
+        },
+        "cadai.external.blenderPath": {
+          "type": "string",
+          "scope": "machine",
+          "default": "",
+          "description": "Blender programının yolu (render). Boşsa otomatik bulunur (PATH, Program Files, Steam, /Applications, snap)."
+        },
+        "cadai.external.openscadPath": {
+          "type": "string",
+          "scope": "machine",
+          "default": "",
+          "description": "OpenSCAD programının yolu (Windows'ta openscad.com). Boşsa otomatik bulunur."
+        },
+        "cadai.external.kicadCliPath": {
+          "type": "string",
+          "scope": "machine",
+          "default": "",
+          "description": "KiCad'in kicad-cli programının yolu (devre kartını 3B içe alma). Boşsa otomatik bulunur."
+        },
+        "cadai.external.codeCadPython": {
+          "type": "string",
+          "scope": "machine",
+          "default": "",
+          "description": "build123d ya da CadQuery kurulu Python'un yolu (ör. bir sanal ortamın python.exe'si). Boşsa PATH'teki Python'lar denenir. İkisini aynı ortama kurmayın: farklı OCP paketleri çakışır."
+        },
+        "cadai.history.notes": {
+          "type": "boolean",
+          "default": true,
+          "description": "Her değişiklik için Obsidian uyumlu not yaz (günlük, parça notları, [[bağlantılar]])."
+        }
+      }
+    },
+    "taskDefinitions": [
+      {
+        "type": "cadai",
+        "required": [
+          "program"
+        ],
+        "properties": {
+          "program": {
+            "type": "string",
+            "description": "Kurulan harici program (blender, openscad, kicad_cli, codecad_python)."
+          }
+        }
+      }
+    ],
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "cadai.freecad",
+        "label": "CadAI · FreeCAD"
+      }
+    ]
+  },
+  "scripts": {
+    "vendor": "node scripts/build-vendor.mjs",
+    "test": "node --test \"test/unit/**/*.test.js\"",
+    "test:viewer": "node test/e2e/viewer.e2e.mjs",
+    "check": "node --check extension.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "playwright-core": "^1.63.0",
+    "three": "0.186.1",
+    "three-mesh-bvh": "0.9.15"
+  }
+}

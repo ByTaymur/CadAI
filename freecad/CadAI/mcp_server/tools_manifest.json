@@ -1,0 +1,3095 @@
+[
+ {
+  "name": "get_document_summary",
+  "title": "Document summary",
+  "description": "List objects in the active FreeCAD document with type, dimension properties, expressions, bounding box and volume. Call this first to learn object names.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "include_fem": {
+     "type": "boolean",
+     "description": "Also list FEM objects (analysis, constraints)."
+    }
+   }
+  },
+  "mutates": false,
+  "destructive": true,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "List all objects with names, sizes and volume. Call first to learn object names.",
+   "input_schema": {
+    "type": "object",
+    "properties": {}
+   },
+   "group": "core"
+  }
+ },
+ {
+  "name": "get_selection",
+  "title": "Current selection",
+  "description": "Return what the user has selected in the 3D view: objects and faces/edges with geometry (type, area, center, normal, radius). Use these face names for edits and FEM loads.",
+  "input_schema": {
+   "type": "object",
+   "properties": {}
+  },
+  "mutates": false,
+  "destructive": true,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "What the user selected in the 3D view (object, face/edge names). Use when they say 'this', 'bu', 'burası'.",
+   "input_schema": {
+    "type": "object",
+    "properties": {}
+   },
+   "group": "core"
+  }
+ },
+ {
+  "name": "find_faces",
+  "title": "Find faces",
+  "description": "Find faces of an object by criteria instead of guessing names. Example: the face at the far +X end -> extreme='max_x'; top flat face -> normal=[0,0,1]; holes of radius 4 -> surface_type='Cylinder', radius_mm=4.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "object": {
+     "type": "string",
+     "description": "Object name or label."
+    },
+    "surface_type": {
+     "type": "string",
+     "description": "Plane, Cylinder, Cone, Sphere, Toroid, BSplineSurface"
+    },
+    "normal": {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "description": "Outward normal [x,y,z] of planar faces."
+    },
+    "extreme": {
+     "type": "string",
+     "enum": [
+      "min_x",
+      "max_x",
+      "min_y",
+      "max_y",
+      "min_z",
+      "max_z"
+     ],
+     "description": "Keep faces whose center is extreme along an axis."
+    },
+    "radius_mm": {
+     "type": "number"
+    },
+    "angle_tol_deg": {
+     "type": "number"
+    }
+   },
+   "required": [
+    "object"
+   ]
+  },
+  "mutates": false,
+  "destructive": true,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Find faces of an object. Top face: normal=[0,0,1]. Face at the +X end: extreme='max_x'. Holes of radius 4: surface_type='Cylinder', radius_mm=4. Returns names and center points.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "object": {
+      "type": "string",
+      "description": "Object name or label."
+     },
+     "surface_type": {
+      "type": "string",
+      "description": "Plane, Cylinder, Cone, Sphere, Toroid, BSplineSurface"
+     },
+     "normal": {
+      "type": "array",
+      "items": {
+       "type": "number"
+      },
+      "description": "Outward normal [x,y,z] of planar faces."
+     },
+     "extreme": {
+      "type": "string",
+      "enum": [
+       "min_x",
+       "max_x",
+       "min_y",
+       "max_y",
+       "min_z",
+       "max_z"
+      ],
+      "description": "Keep faces whose center is extreme along an axis."
+     },
+     "radius_mm": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "object"
+    ]
+   },
+   "group": "core"
+  }
+ },
+ {
+  "name": "list_edges",
+  "title": "List edges",
+  "description": "List edges of an object (optionally only those bounding given faces, or of a curve type: Line, Circle).",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "object": {
+     "type": "string"
+    },
+    "curve_type": {
+     "type": "string"
+    },
+    "faces": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    }
+   },
+   "required": [
+    "object"
+   ]
+  },
+  "mutates": false,
+  "destructive": true,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "List edges of an object (names, length, type), optionally only those of some faces.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "object": {
+      "type": "string"
+     },
+     "curve_type": {
+      "type": "string"
+     },
+     "faces": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     }
+    },
+    "required": [
+     "object"
+    ]
+   },
+   "group": "core"
+  }
+ },
+ {
+  "name": "measure",
+  "title": "Measure",
+  "description": "Measure objects (bounding box, volume, area, mass, validity) and/or the minimum distance between two references like 'Box:Face1'. Use after every modeling change to verify dimensions.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "objects": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "density_kg_m3": {
+     "type": "number"
+    },
+    "distance_between": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "mutates": false,
+  "destructive": true,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Measure objects: size (bbox), volume, mass, validity. Use after every change.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "objects": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "density_kg_m3": {
+      "type": "number"
+     }
+    }
+   },
+   "group": "core"
+  }
+ },
+ {
+  "name": "capture_view",
+  "title": "Screenshot of the 3D view",
+  "description": "Take a screenshot of the 3D view from a standard direction so you can visually check the model.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "view": {
+     "type": "string",
+     "enum": [
+      "iso",
+      "front",
+      "top",
+      "right",
+      "back",
+      "bottom",
+      "left"
+     ]
+    }
+   }
+  },
+  "mutates": false,
+  "destructive": true,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Screenshot of the 3D view (only useful if you can see images).",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "view": {
+      "type": "string",
+      "enum": [
+       "iso",
+       "front",
+       "top",
+       "right",
+       "back",
+       "bottom",
+       "left"
+      ]
+     }
+    }
+   },
+   "group": "view"
+  }
+ },
+ {
+  "name": "beam_hand_calc",
+  "title": "Beam hand calculation",
+  "description": "Hand-calculation reference values (Euler-Bernoulli) to sanity-check FEM results: cantilever_end_load, simply_supported_center_load, axial, cantilever_first_frequency. Units: mm, N, MPa, kg/m³.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "case": {
+     "type": "string",
+     "enum": [
+      "cantilever_end_load",
+      "simply_supported_center_load",
+      "axial",
+      "cantilever_first_frequency"
+     ]
+    },
+    "length_mm": {
+     "type": "number"
+    },
+    "force_n": {
+     "type": "number"
+    },
+    "width_mm": {
+     "type": "number",
+     "description": "Rectangular section width (perpendicular to load)."
+    },
+    "height_mm": {
+     "type": "number",
+     "description": "Rectangular section height (in load direction)."
+    },
+    "inertia_mm4": {
+     "type": "number"
+    },
+    "fiber_dist_mm": {
+     "type": "number"
+    },
+    "area_mm2": {
+     "type": "number"
+    },
+    "youngs_modulus_mpa": {
+     "type": "number"
+    },
+    "density_kg_m3": {
+     "type": "number"
+    }
+   },
+   "required": [
+    "case",
+    "length_mm"
+   ]
+  },
+  "mutates": false,
+  "destructive": true,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Hand calculation for a beam to compare with FEM.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "case": {
+      "type": "string",
+      "enum": [
+       "cantilever_end_load",
+       "simply_supported_center_load",
+       "axial",
+       "cantilever_first_frequency"
+      ]
+     },
+     "length_mm": {
+      "type": "number"
+     },
+     "force_n": {
+      "type": "number"
+     },
+     "width_mm": {
+      "type": "number",
+      "description": "Rectangular section width (perpendicular to load)."
+     },
+     "height_mm": {
+      "type": "number",
+      "description": "Rectangular section height (in load direction)."
+     }
+    },
+    "required": [
+     "case",
+     "length_mm"
+    ]
+   },
+   "group": "fem"
+  }
+ },
+ {
+  "name": "get_markers",
+  "title": "Markers on the model",
+  "description": "Read the numbered markings (#1, #2, ...) the user drew on the model in the 3D view, each with a note saying what to change there. Kinds: point (pin), dimension (two points + distance), line (polyline drawn on the part), circle (center, diameter, plane normal) and pen (freehand stroke on the surface). Returns exact coordinates, the face/edge/vertex under them and that element's current geometry. Call this whenever the user mentions markers/drawings, '#n', 'işaret', 'çizdiğim', or asks you to apply their markings.",
+  "input_schema": {
+   "type": "object",
+   "properties": {}
+  },
+  "mutates": false,
+  "destructive": true,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Read the numbered markers (#1, #2...) the user placed on the model, each with a note saying what to change there.",
+   "input_schema": {
+    "type": "object",
+    "properties": {}
+   },
+   "group": "core"
+  }
+ },
+ {
+  "name": "run_python",
+  "title": "Run FreeCAD Python",
+  "description": "Run FreeCAD Python code to create or change geometry. Variables: doc (active document), App, Part, Vector, Placement, Rotation, math. Runs in one undo transaction; on error or invalid recompute everything is rolled back. Prefer set_property for changing an existing dimension.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "code": {
+     "type": "string",
+     "description": "Python code. End with doc.recompute() is not needed."
+    },
+    "description": {
+     "type": "string",
+     "description": "Short title shown in the undo history."
+    }
+   },
+   "required": [
+    "code"
+   ]
+  },
+  "mutates": true,
+  "destructive": true,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Last resort when no other tool fits: run FreeCAD Python (variables doc, App, Part, Vector). Get working code from freecad_recipes first.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "code": {
+      "type": "string",
+      "description": "Python code. End with doc.recompute() is not needed."
+     },
+     "description": {
+      "type": "string",
+      "description": "Short title shown in the undo history."
+     }
+    },
+    "required": [
+     "code"
+    ]
+   },
+   "group": "core"
+  }
+ },
+ {
+  "name": "set_property",
+  "title": "Change a property",
+  "description": "Change one property of an existing object, e.g. Length of a Pad to '20 mm' or Radius of a cylinder to 5. Use for parametric edits. Rolled back if recompute fails.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "object": {
+     "type": "string"
+    },
+    "property": {
+     "type": "string"
+    },
+    "value": {
+     "description": "New value: number, string with unit like '20 mm', or boolean.",
+     "type": [
+      "number",
+      "string",
+      "boolean"
+     ]
+    }
+   },
+   "required": [
+    "object",
+    "property",
+    "value"
+   ]
+  },
+  "mutates": true,
+  "destructive": true,
+  "idempotent": true,
+  "open_world": false,
+  "small": {
+   "description": "Change one property of an existing object, e.g. Length of a box or Pad to 25.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "object": {
+      "type": "string"
+     },
+     "property": {
+      "type": "string"
+     },
+     "value": {
+      "description": "New value: number, string with unit like '20 mm', or boolean.",
+      "type": [
+       "number",
+       "string",
+       "boolean"
+      ]
+     }
+    },
+    "required": [
+     "object",
+     "property",
+     "value"
+    ]
+   },
+   "group": "core"
+  }
+ },
+ {
+  "name": "export_model",
+  "title": "Export STEP/STL/3MF",
+  "description": "Export objects to a file. Extension selects format: .step/.stp/.iges/.brep (exact CAD), .glb/.gltf (web/AR, with triangulation) or .stl/.obj/.3mf (mesh, 3D printing).",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "objects": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "path": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "objects",
+    "path"
+   ]
+  },
+  "mutates": true,
+  "destructive": true,
+  "idempotent": true,
+  "open_world": false,
+  "small": {
+   "description": "Export objects to a file: .step, .stl, .3mf, .glb...",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "objects": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "path": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "objects",
+     "path"
+    ]
+   },
+   "group": "export"
+  }
+ },
+ {
+  "name": "add_box",
+  "title": "Add a box",
+  "description": "Create a box (block, plate) from length (X), width (Y), height (Z) in mm. position is its corner with the smallest x, y, z. Parametric: change sizes later with set_property.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "length": {
+     "type": "number",
+     "description": "X size, mm"
+    },
+    "width": {
+     "type": "number",
+     "description": "Y size, mm"
+    },
+    "height": {
+     "type": "number",
+     "description": "Z size, mm"
+    },
+    "position": {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "minItems": 3,
+     "maxItems": 3,
+     "description": "Corner [x, y, z], mm. Default [0, 0, 0]."
+    },
+    "name": {
+     "type": "string",
+     "description": "Object name, e.g. 'Plate'."
+    }
+   },
+   "required": [
+    "length",
+    "width",
+    "height"
+   ]
+  },
+  "mutates": true,
+  "destructive": false,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Create a box/plate: length (X), width (Y), height (Z) in mm; position = min corner.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "length": {
+      "type": "number",
+      "description": "X size, mm"
+     },
+     "width": {
+      "type": "number",
+      "description": "Y size, mm"
+     },
+     "height": {
+      "type": "number",
+      "description": "Z size, mm"
+     },
+     "position": {
+      "type": "array",
+      "items": {
+       "type": "number"
+      },
+      "minItems": 3,
+      "maxItems": 3,
+      "description": "Corner [x, y, z], mm. Default [0, 0, 0]."
+     },
+     "name": {
+      "type": "string",
+      "description": "Object name, e.g. 'Plate'."
+     }
+    },
+    "required": [
+     "length",
+     "width",
+     "height"
+    ]
+   },
+   "group": "core"
+  }
+ },
+ {
+  "name": "add_cylinder",
+  "title": "Add a cylinder",
+  "description": "Create a cylinder (shaft, pin, boss) from diameter and height in mm. position is the center of its bottom circle; direction is its axis (default up [0, 0, 1]).",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "diameter": {
+     "type": "number",
+     "description": "mm"
+    },
+    "height": {
+     "type": "number",
+     "description": "mm, along direction"
+    },
+    "position": {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "minItems": 3,
+     "maxItems": 3,
+     "description": "Center of the bottom circle [x, y, z], mm. Default [0, 0, 0]."
+    },
+    "direction": {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "minItems": 3,
+     "maxItems": 3,
+     "description": "Axis, default [0, 0, 1]."
+    },
+    "name": {
+     "type": "string"
+    },
+    "radius": {
+     "type": "number",
+     "description": "Instead of diameter."
+    }
+   },
+   "required": [
+    "height"
+   ]
+  },
+  "mutates": true,
+  "destructive": false,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Create a cylinder: diameter, height in mm; position = bottom center; direction = axis.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "diameter": {
+      "type": "number",
+      "description": "mm"
+     },
+     "height": {
+      "type": "number",
+      "description": "mm, along direction"
+     },
+     "position": {
+      "type": "array",
+      "items": {
+       "type": "number"
+      },
+      "minItems": 3,
+      "maxItems": 3,
+      "description": "Center of the bottom circle [x, y, z], mm. Default [0, 0, 0]."
+     },
+     "direction": {
+      "type": "array",
+      "items": {
+       "type": "number"
+      },
+      "minItems": 3,
+      "maxItems": 3,
+      "description": "Axis, default [0, 0, 1]."
+     },
+     "name": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "height"
+    ]
+   },
+   "group": "core"
+  }
+ },
+ {
+  "name": "make_hole",
+  "title": "Drill a hole",
+  "description": "Drill a round hole into an object. position: a point on the face where the hole starts (take 'center' from find_faces or a marker point). The hole goes into the material, through the whole part unless depth is given. Returns the new object (e.g. Plate_Hole); the old name keeps working.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "object": {
+     "type": "string",
+     "description": "Object name or label."
+    },
+    "position": {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "minItems": 3,
+     "maxItems": 3,
+     "description": "Hole center on the surface [x, y, z], mm."
+    },
+    "diameter": {
+     "type": "number",
+     "description": "mm"
+    },
+    "depth": {
+     "type": "number",
+     "description": "mm. Leave out for a through hole."
+    },
+    "direction": {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "minItems": 3,
+     "maxItems": 3,
+     "description": "Drilling direction. Default: into the face at position."
+    },
+    "radius": {
+     "type": "number",
+     "description": "Instead of diameter."
+    }
+   },
+   "required": [
+    "object",
+    "position"
+   ]
+  },
+  "mutates": true,
+  "destructive": true,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Drill a hole: position = point on the face (a 'center' from find_faces). Through the part unless depth is given.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "object": {
+      "type": "string",
+      "description": "Object name or label."
+     },
+     "position": {
+      "type": "array",
+      "items": {
+       "type": "number"
+      },
+      "minItems": 3,
+      "maxItems": 3,
+      "description": "Hole center on the surface [x, y, z], mm."
+     },
+     "diameter": {
+      "type": "number",
+      "description": "mm"
+     },
+     "depth": {
+      "type": "number",
+      "description": "mm. Leave out for a through hole."
+     },
+     "direction": {
+      "type": "array",
+      "items": {
+       "type": "number"
+      },
+      "minItems": 3,
+      "maxItems": 3,
+      "description": "Drilling direction. Default: into the face at position."
+     }
+    },
+    "required": [
+     "object",
+     "position"
+    ]
+   },
+   "group": "core"
+  }
+ },
+ {
+  "name": "fillet_edges",
+  "title": "Fillet edges",
+  "description": "Round edges of an object with a radius. edges: names from list_edges (['Edge1', 'Edge5']) or one word: 'all', 'top', 'bottom', 'vertical', 'horizontal', 'circular'.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "object": {
+     "type": "string"
+    },
+    "edges": {
+     "type": [
+      "array",
+      "string"
+     ],
+     "items": {
+      "type": "string"
+     },
+     "description": "['Edge1', 'Edge3'] or all / top / bottom / vertical / horizontal / circular"
+    },
+    "radius": {
+     "type": "number",
+     "description": "mm"
+    }
+   },
+   "required": [
+    "object",
+    "edges",
+    "radius"
+   ]
+  },
+  "mutates": true,
+  "destructive": true,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Round edges: edges = ['Edge1', ...] from list_edges, or 'all' / 'top' / 'bottom' / 'vertical' / 'circular'.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "object": {
+      "type": "string"
+     },
+     "edges": {
+      "type": [
+       "array",
+       "string"
+      ],
+      "items": {
+       "type": "string"
+      },
+      "description": "['Edge1', 'Edge3'] or all / top / bottom / vertical / horizontal / circular"
+     },
+     "radius": {
+      "type": "number",
+      "description": "mm"
+     }
+    },
+    "required": [
+     "object",
+     "edges",
+     "radius"
+    ]
+   },
+   "group": "core"
+  }
+ },
+ {
+  "name": "chamfer_edges",
+  "title": "Chamfer edges",
+  "description": "Bevel (chamfer) edges of an object by a size in mm (45°). edges: names from list_edges or one word: 'all', 'top', 'bottom', 'vertical', 'horizontal', 'circular'.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "object": {
+     "type": "string"
+    },
+    "edges": {
+     "type": [
+      "array",
+      "string"
+     ],
+     "items": {
+      "type": "string"
+     },
+     "description": "['Edge2', 'Edge4'] or all / top / bottom / vertical / horizontal / circular"
+    },
+    "size": {
+     "type": "number",
+     "description": "mm"
+    }
+   },
+   "required": [
+    "object",
+    "edges",
+    "size"
+   ]
+  },
+  "mutates": true,
+  "destructive": true,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Bevel edges by size mm: edges = ['Edge1', ...] or 'all' / 'top' / 'bottom' / 'vertical' / 'circular'.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "object": {
+      "type": "string"
+     },
+     "edges": {
+      "type": [
+       "array",
+       "string"
+      ],
+      "items": {
+       "type": "string"
+      },
+      "description": "['Edge2', 'Edge4'] or all / top / bottom / vertical / horizontal / circular"
+     },
+     "size": {
+      "type": "number",
+      "description": "mm"
+     }
+    },
+    "required": [
+     "object",
+     "edges",
+     "size"
+    ]
+   },
+   "group": "core"
+  }
+ },
+ {
+  "name": "boolean",
+  "title": "Cut / fuse / common",
+  "description": "Combine two objects: 'cut' removes tool from base, 'fuse' joins them, 'common' keeps the overlap.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "operation": {
+     "type": "string",
+     "enum": [
+      "cut",
+      "fuse",
+      "common"
+     ]
+    },
+    "base": {
+     "type": "string",
+     "description": "Object that stays (cut: the part)."
+    },
+    "tool": {
+     "type": "string",
+     "description": "Object used on it (cut: what is removed)."
+    }
+   },
+   "required": [
+    "operation",
+    "base",
+    "tool"
+   ]
+  },
+  "mutates": true,
+  "destructive": true,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Combine two objects: cut (remove tool from base), fuse (join) or common (overlap).",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "operation": {
+      "type": "string",
+      "enum": [
+       "cut",
+       "fuse",
+       "common"
+      ]
+     },
+     "base": {
+      "type": "string",
+      "description": "Object that stays (cut: the part)."
+     },
+     "tool": {
+      "type": "string",
+      "description": "Object used on it (cut: what is removed)."
+     }
+    },
+    "required": [
+     "operation",
+     "base",
+     "tool"
+    ]
+   },
+   "group": "core"
+  }
+ },
+ {
+  "name": "move_object",
+  "title": "Move / rotate",
+  "description": "Move or rotate an object. position: new placement position [x, y, z]; offset: move by [dx, dy, dz]; rotation_deg about rotation_axis (default Z) through the object's center.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "object": {
+     "type": "string"
+    },
+    "position": {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "minItems": 3,
+     "maxItems": 3,
+     "description": "New position [x, y, z], mm."
+    },
+    "offset": {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "minItems": 3,
+     "maxItems": 3,
+     "description": "Move by [dx, dy, dz], mm."
+    },
+    "rotation_axis": {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "minItems": 3,
+     "maxItems": 3,
+     "description": "Default [0, 0, 1]."
+    },
+    "rotation_deg": {
+     "type": "number"
+    }
+   },
+   "required": [
+    "object"
+   ]
+  },
+  "mutates": true,
+  "destructive": true,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Move (position or offset [x,y,z]) or rotate (rotation_deg about rotation_axis) an object.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "object": {
+      "type": "string"
+     },
+     "position": {
+      "type": "array",
+      "items": {
+       "type": "number"
+      },
+      "minItems": 3,
+      "maxItems": 3,
+      "description": "New position [x, y, z], mm."
+     },
+     "offset": {
+      "type": "array",
+      "items": {
+       "type": "number"
+      },
+      "minItems": 3,
+      "maxItems": 3,
+      "description": "Move by [dx, dy, dz], mm."
+     },
+     "rotation_axis": {
+      "type": "array",
+      "items": {
+       "type": "number"
+      },
+      "minItems": 3,
+      "maxItems": 3,
+      "description": "Default [0, 0, 1]."
+     },
+     "rotation_deg": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "object"
+    ]
+   },
+   "group": "core"
+  }
+ },
+ {
+  "name": "freecad_recipes",
+  "title": "FreeCAD code recipes",
+  "description": "Tested FreeCAD Python patterns to start run_python code from (holes, bolt circles, fillets, chamfers, pockets, plates, extrusions, revolved shafts, parametric PartDesign sketch + pad). Call without topic to list them; with topic to get the code. Prefer this over writing FreeCAD API calls from memory.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "topic": {
+     "type": "string",
+     "enum": [
+      "through_hole",
+      "bolt_circle",
+      "fillet_edges",
+      "chamfer_edges",
+      "rect_pocket",
+      "plate_with_holes",
+      "extrude_profile",
+      "revolve_shaft",
+      "partdesign_pad"
+     ]
+    }
+   }
+  },
+  "mutates": false,
+  "destructive": true,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Tested FreeCAD Python code to start run_python from. Call without topic to list them.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "topic": {
+      "type": "string",
+      "enum": [
+       "through_hole",
+       "bolt_circle",
+       "fillet_edges",
+       "chamfer_edges",
+       "rect_pocket",
+       "plate_with_holes",
+       "extrude_profile",
+       "revolve_shaft",
+       "partdesign_pad"
+      ]
+     }
+    }
+   },
+   "group": "recipes"
+  }
+ },
+ {
+  "name": "fem_setup",
+  "title": "Set up FEM analysis",
+  "description": "Create (or replace) a CalculiX FEM analysis for one solid: material, fixed faces, forces, pressures and a 2nd-order Gmsh mesh. Face names come from get_selection or find_faces. analysis_type 'frequency' gives natural frequencies (no loads needed). Then call fem_run.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "object": {
+     "type": "string"
+    },
+    "fixed_faces": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "forces": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "properties": {
+       "faces": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "force_n": {
+        "type": "number",
+        "description": "Total force in newtons, spread over the faces."
+       },
+       "direction": {
+        "type": "array",
+        "items": {
+         "type": "number"
+        },
+        "description": "Force direction [x,y,z]."
+       }
+      },
+      "required": [
+       "faces",
+       "force_n",
+       "direction"
+      ]
+     }
+    },
+    "pressures": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "properties": {
+       "faces": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "pressure_mpa": {
+        "type": "number"
+       },
+       "outward": {
+        "type": "boolean",
+        "description": "Default false = pressure pushes into the face."
+       }
+      },
+      "required": [
+       "faces",
+       "pressure_mpa"
+      ]
+     }
+    },
+    "material": {
+     "type": "string",
+     "enum": [
+      "steel",
+      "stainless_steel",
+      "aluminum",
+      "titanium",
+      "pla",
+      "abs"
+     ]
+    },
+    "custom_material": {
+     "type": "object",
+     "properties": {
+      "name": {
+       "type": "string"
+      },
+      "youngs_modulus_mpa": {
+       "type": "number"
+      },
+      "poisson_ratio": {
+       "type": "number"
+      },
+      "density_kg_m3": {
+       "type": "number"
+      }
+     },
+     "required": [
+      "youngs_modulus_mpa"
+     ]
+    },
+    "mesh_size_mm": {
+     "type": "number",
+     "description": "Max element size. Default: smallest bbox side / 3."
+    },
+    "analysis_type": {
+     "type": "string",
+     "enum": [
+      "static",
+      "frequency"
+     ]
+    },
+    "modes": {
+     "type": "integer"
+    }
+   },
+   "required": [
+    "object",
+    "fixed_faces"
+   ]
+  },
+  "mutates": true,
+  "destructive": true,
+  "idempotent": true,
+  "open_world": false,
+  "small": {
+   "description": "Set up a stress analysis: fixed faces, forces [{faces, force_n, direction}], material. Face names from find_faces.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "object": {
+      "type": "string"
+     },
+     "fixed_faces": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "forces": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "faces": {
+         "type": "array",
+         "items": {
+          "type": "string"
+         }
+        },
+        "force_n": {
+         "type": "number",
+         "description": "Total force in newtons, spread over the faces."
+        },
+        "direction": {
+         "type": "array",
+         "items": {
+          "type": "number"
+         },
+         "description": "Force direction [x,y,z]."
+        }
+       },
+       "required": [
+        "faces",
+        "force_n",
+        "direction"
+       ]
+      }
+     },
+     "material": {
+      "type": "string",
+      "enum": [
+       "steel",
+       "stainless_steel",
+       "aluminum",
+       "titanium",
+       "pla",
+       "abs"
+      ]
+     },
+     "analysis_type": {
+      "type": "string",
+      "enum": [
+       "static",
+       "frequency"
+      ]
+     }
+    },
+    "required": [
+     "object",
+     "fixed_faces"
+    ]
+   },
+   "group": "fem"
+  }
+ },
+ {
+  "name": "fem_run",
+  "title": "Solve FEM analysis",
+  "description": "Mesh and solve an analysis created by fem_setup, then summarize results: max displacement, max and 99th percentile von Mises stress with locations, force balance (support reactions vs applied loads), or natural frequencies. Small parts finish in seconds. For large models or fine meshes set background=true: it returns a job id at once and you poll fem_status.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "analysis": {
+     "type": "string"
+    },
+    "background": {
+     "type": "boolean",
+     "description": "Run CalculiX in the background (FreeCAD stays responsive)."
+    }
+   },
+   "required": [
+    "analysis"
+   ]
+  },
+  "mutates": true,
+  "destructive": false,
+  "idempotent": true,
+  "open_world": false,
+  "small": {
+   "description": "Run the analysis made by fem_setup; returns max stress, displacement, force balance.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "analysis": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "analysis"
+    ]
+   },
+   "group": "fem"
+  }
+ },
+ {
+  "name": "fem_status",
+  "title": "FEM job status",
+  "description": "Check a background FEM job started with fem_run(background=true). Returns 'running' or the result summary.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "job": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "job"
+   ]
+  },
+  "mutates": false,
+  "destructive": true,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Status of a background FEM job.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "job": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "job"
+    ]
+   },
+   "group": "fem"
+  }
+ },
+ {
+  "name": "fem_convergence",
+  "title": "Mesh convergence study",
+  "description": "Mesh convergence study: solve the analysis on 2-4 successively finer meshes (mesh size × ratio each step) and report how much max displacement, 99th-percentile and peak von Mises (or the first frequency) still change. Flags a stress singularity when only the peak keeps growing. Use for any result that matters; it takes a few solves.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "analysis": {
+     "type": "string"
+    },
+    "levels": {
+     "type": "integer",
+     "minimum": 2,
+     "maximum": 4,
+     "description": "Number of meshes (default 3)."
+    },
+    "ratio": {
+     "type": "number",
+     "description": "Mesh size factor per level, 0.4-0.9 (default 0.7)."
+    }
+   },
+   "required": [
+    "analysis"
+   ]
+  },
+  "mutates": true,
+  "destructive": false,
+  "idempotent": true,
+  "open_world": false
+ },
+ {
+  "name": "dfm_check",
+  "title": "Manufacturability check (DFM)",
+  "description": "Design-for-manufacturing check measured on the exact geometry, with evidence for every finding (measured value, limit, faces/edges, rule). process: 'fdm' (3D printing: build volume, overhangs, horizontal holes, thin walls), 'cnc' (3-axis milling from +direction: sharp internal corners, small internal radii, deep holes, second setups, undercuts, thin walls), 'injection_molding' (draft, undercuts, wall thickness and uniformity), 'sheet_metal' (uniform thickness, bend radius ≥ t, hole Ø ≥ t). direction = build / tool / mold pull direction, default [0,0,1]. Limits can be overridden.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "object": {
+     "type": "string"
+    },
+    "process": {
+     "type": "string",
+     "enum": [
+      "fdm",
+      "cnc",
+      "injection_molding",
+      "sheet_metal"
+     ]
+    },
+    "direction": {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "minItems": 3,
+     "maxItems": 3
+    },
+    "min_wall_mm": {
+     "type": "number"
+    },
+    "max_wall_mm": {
+     "type": "number"
+    },
+    "overhang_deg": {
+     "type": "number"
+    },
+    "min_draft_deg": {
+     "type": "number"
+    },
+    "min_tool_radius_mm": {
+     "type": "number"
+    },
+    "max_hole_depth_ratio": {
+     "type": "number"
+    },
+    "build_volume_mm": {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "minItems": 3,
+     "maxItems": 3
+    }
+   },
+   "required": [
+    "object",
+    "process"
+   ]
+  },
+  "mutates": false,
+  "destructive": true,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Manufacturability check of a part for fdm (3D printing), cnc, injection_molding or sheet_metal.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "object": {
+      "type": "string"
+     },
+     "process": {
+      "type": "string",
+      "enum": [
+       "fdm",
+       "cnc",
+       "injection_molding",
+       "sheet_metal"
+      ]
+     }
+    },
+    "required": [
+     "object",
+     "process"
+    ]
+   },
+   "group": "dfm"
+  }
+ },
+ {
+  "name": "search_parts",
+  "title": "Search standard parts (step.parts)",
+  "description": "Search step.parts, an open catalog of 16 000+ ready STEP models of standard parts (ISO/DIN screws, nuts, washers, bearings, aluminium extrusions, motors, connectors, boards...). Use it instead of modeling a standard component. Examples: query='M8 socket head', standard='ISO 4762'; query='608 bearing'; query='2020 extrusion'. Returns ids for insert_part.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "query": {
+     "type": "string",
+     "description": "Free text, e.g. 'M3x10 screw', 'bearing 608', 'NEMA 17'."
+    },
+    "category": {
+     "type": "string",
+     "description": "e.g. fastener, bearing, structural, electronics, motor"
+    },
+    "family": {
+     "type": "string",
+     "description": "e.g. socket-head-cap-screw, hex-nut, deep-groove-ball-bearing"
+    },
+    "standard": {
+     "type": "string",
+     "description": "e.g. ISO 4762, DIN 912, ISO 4032"
+    },
+    "tags": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "limit": {
+     "type": "integer",
+     "minimum": 1,
+     "maximum": 30
+    }
+   },
+   "required": [
+    "query"
+   ]
+  },
+  "mutates": false,
+  "destructive": true,
+  "idempotent": false,
+  "open_world": true,
+  "small": {
+   "description": "Search ready standard parts (screws, nuts, washers, bearings, profiles, motors), e.g. query='M8x20 socket head'.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "query": {
+      "type": "string",
+      "description": "Free text, e.g. 'M3x10 screw', 'bearing 608', 'NEMA 17'."
+     },
+     "standard": {
+      "type": "string",
+      "description": "e.g. ISO 4762, DIN 912, ISO 4032"
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 30
+     }
+    },
+    "required": [
+     "query"
+    ]
+   },
+   "group": "parts"
+  }
+ },
+ {
+  "name": "insert_part",
+  "title": "Insert a standard part (step.parts)",
+  "description": "Download a part from step.parts (verified by SHA-256) and insert it into the open document as a solid at a position (mm) with an optional rotation. Use an id returned by search_parts.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "part_id": {
+     "type": "string"
+    },
+    "position": {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "minItems": 3,
+     "maxItems": 3
+    },
+    "rotation_axis": {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "minItems": 3,
+     "maxItems": 3
+    },
+    "rotation_deg": {
+     "type": "number"
+    },
+    "name": {
+     "type": "string",
+     "description": "Label for the new object (default: catalog name)."
+    }
+   },
+   "required": [
+    "part_id"
+   ]
+  },
+  "mutates": true,
+  "destructive": false,
+  "idempotent": false,
+  "open_world": true,
+  "small": {
+   "description": "Insert a part found by search_parts at position [x,y,z].",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "part_id": {
+      "type": "string"
+     },
+     "position": {
+      "type": "array",
+      "items": {
+       "type": "number"
+      },
+      "minItems": 3,
+      "maxItems": 3
+     },
+     "rotation_axis": {
+      "type": "array",
+      "items": {
+       "type": "number"
+      },
+      "minItems": 3,
+      "maxItems": 3
+     },
+     "rotation_deg": {
+      "type": "number"
+     },
+     "name": {
+      "type": "string",
+      "description": "Label for the new object (default: catalog name)."
+     }
+    },
+    "required": [
+     "part_id"
+    ]
+   },
+   "group": "parts"
+  }
+ },
+ {
+  "name": "design_history",
+  "title": "Design history",
+  "description": "List recent versions of the open document from the optional automatic design history (one git commit per change, newest first, with a summary like 'Beam.Length 100 mm → 120 mm'). Use it to answer 'what changed', to find a version to go back to, or before undoing a series of changes.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "limit": {
+     "type": "integer",
+     "minimum": 1,
+     "maximum": 200
+    }
+   }
+  },
+  "mutates": false,
+  "destructive": true,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Earlier saved versions of the model (if history is on).",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200
+     }
+    }
+   },
+   "group": "history"
+  }
+ },
+ {
+  "name": "open_design_version",
+  "title": "Open a past version",
+  "description": "Open the document as it was at a commit from design_history, as a NEW document next to the current one (nothing is overwritten). Compare with measure, or copy values back with set_property.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "commit": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "commit"
+   ]
+  },
+  "mutates": true,
+  "destructive": false,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Open an earlier version as a new document.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "commit": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "commit"
+    ]
+   },
+   "group": "history"
+  }
+ },
+ {
+  "name": "technical_drawing",
+  "title": "Technical drawing (A3 PDF)",
+  "description": "Technical drawing of a part on an A3 sheet with the Turkish title block (BAŞLIK, MALZEME, RESİM NO, AĞIRLIK, ÖLÇEK, REVİZYON), saved as PDF + PNG (200 dpi) next to the .FCStd. Views in first-angle (ISO-E) arrangement with exact hidden lines: front (ÖN), side (SOL GÖRÜNÜŞ, or KESİT A-A through the middle when section='auto' and the front view has hidden edges), top (ÜST), shaded isometric. Automatic: largest standard scale that fits, overall sizes, diameters of round features seen as circles ('4x Ø4,20'), center lines, mass = volume × density of the material. Returns a report and a small picture of the sheet.\nRules: never invent a dimension. Points for added dimensions/leaders are model coordinates (mm) taken from list_edges / find_faces / measure; the value is measured between them on the drawing. Look at the returned picture; if 'warnings' is not empty (overlapping texts, text outside the frame or on the isometric picture, views not fitting) fix it — move a dimension with side/offset_mm, a leader with side/rise_mm, or pick a smaller scale — and call again.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "object": {
+     "type": "string",
+     "description": "Object name or label (a solid)."
+    },
+    "title": {
+     "type": "string",
+     "description": "BAŞLIK; default: the object's label."
+    },
+    "drawing_no": {
+     "type": "string",
+     "description": "RESİM NO; default: the object's label."
+    },
+    "material": {
+     "type": "string",
+     "description": "Short material name for the title block, e.g. 'AL 6061', 'S235', 'PLA'. Default: the object's FreeCAD material. Sets the density for the mass."
+    },
+    "material_long": {
+     "type": "string",
+     "description": "Full name above the title block, e.g. 'ALÜMİNYUM 6061'."
+    },
+    "quantity": {
+     "type": "string",
+     "description": "MİKTAR, default '1 ADET'."
+    },
+    "revision": {
+     "type": [
+      "integer",
+      "string"
+     ]
+    },
+    "scale": {
+     "type": "string",
+     "description": "e.g. '2:1', '1:5'; default: the largest standard scale that fits."
+    },
+    "views": {
+     "type": "array",
+     "items": {
+      "type": "string",
+      "enum": [
+       "front",
+       "top",
+       "side",
+       "iso"
+      ]
+     },
+     "description": "Default all four."
+    },
+    "section": {
+     "type": "string",
+     "enum": [
+      "auto",
+      "always",
+      "none"
+     ],
+     "description": "Side view as section A-A (cut at the middle of X)."
+    },
+    "notes": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "NOTLAR lines (two standard notes come first; at most 9 in all)."
+    },
+    "dimensions": {
+     "type": "array",
+     "description": "Added dimensions between two model points.",
+     "items": {
+      "type": "object",
+      "properties": {
+       "view": {
+        "type": "string",
+        "enum": [
+         "front",
+         "top",
+         "side"
+        ]
+       },
+       "from": {
+        "type": "array",
+        "items": {
+         "type": "number"
+        },
+        "minItems": 3,
+        "maxItems": 3
+       },
+       "to": {
+        "type": "array",
+        "items": {
+         "type": "number"
+        },
+        "minItems": 3,
+        "maxItems": 3
+       },
+       "direction": {
+        "type": "string",
+        "enum": [
+         "horizontal",
+         "vertical",
+         "aligned"
+        ],
+        "description": "In the view; default from the points."
+       },
+       "side": {
+        "type": "string",
+        "enum": [
+         "below",
+         "above",
+         "left",
+         "right",
+         "inside"
+        ],
+        "description": "Where the dimension line goes; 'inside' = through the points (e.g. a bore's diameter inside a section)."
+       },
+       "offset_mm": {
+        "type": "number",
+        "description": "Extra distance on the sheet (mm)."
+       },
+       "text": {
+        "type": "string",
+        "description": "Only to add a prefix like 'Ø' or a fit ('Ø40 g6'); the number must be the measured one."
+       },
+       "tolerance": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        },
+        "minItems": 2,
+        "maxItems": 2,
+        "description": "Upper and lower deviation, e.g. ['0,00', '-0,01']."
+       }
+      },
+      "required": [
+       "from",
+       "to"
+      ]
+     }
+    },
+    "leaders": {
+     "type": "array",
+     "description": "Note arrows, e.g. thread or groove callouts.",
+     "items": {
+      "type": "object",
+      "properties": {
+       "view": {
+        "type": "string",
+        "enum": [
+         "front",
+         "top",
+         "side"
+        ]
+       },
+       "at": {
+        "type": "array",
+        "items": {
+         "type": "number"
+        },
+        "minItems": 3,
+        "maxItems": 3
+       },
+       "text": {
+        "type": "string"
+       },
+       "side": {
+        "type": "string",
+        "enum": [
+         "right",
+         "left",
+         "inside"
+        ]
+       },
+       "rise_mm": {
+        "type": "number",
+        "description": "Height of the shelf above the point (sheet mm)."
+       }
+      },
+      "required": [
+       "at",
+       "text"
+      ]
+     }
+    },
+    "density_kg_m3": {
+     "type": "number",
+     "description": "When the material name does not give it."
+    },
+    "drawn_by": {
+     "type": "string",
+     "description": "ÇİZEN"
+    },
+    "path": {
+     "type": "string",
+     "description": "PDF path; the PNG goes next to it."
+    }
+   },
+   "required": [
+    "object"
+   ]
+  },
+  "mutates": true,
+  "destructive": false,
+  "idempotent": true,
+  "open_world": false,
+  "small": {
+   "description": "Make an A3 technical drawing (PDF + PNG) of one part with views and main dimensions.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "object": {
+      "type": "string",
+      "description": "Object name or label (a solid)."
+     },
+     "title": {
+      "type": "string",
+      "description": "BAŞLIK; default: the object's label."
+     },
+     "material": {
+      "type": "string",
+      "description": "Short material name for the title block, e.g. 'AL 6061', 'S235', 'PLA'. Default: the…"
+     },
+     "scale": {
+      "type": "string",
+      "description": "e.g. '2:1', '1:5'; default: the largest standard scale that fits."
+     }
+    },
+    "required": [
+     "object"
+    ]
+   },
+   "group": "drawing"
+  }
+ },
+ {
+  "name": "render",
+  "title": "Render (Blender / quick)",
+  "description": "Render a realistic picture of the model (PNG next to the .FCStd, or the CadAI folder) and return it. engine 'blender' = Blender Cycles in a separate process on the GPU: studio HDRI light, reflections, soft shadow on the floor, slight edge bevel; 'quick' = built-in renderer, a few seconds, no extra program; 'auto' (default) uses Blender when it is installed. Materials are automatic (FreeCAD material name or label: 'Alüminyum', 'S235', 'PLA'... else the object's colour as plastic, default grey = aluminium); set them per object with materials. Presets: aluminium, anodized, steel, stainless, chrome, brass, copper, gold, cast_iron, black_oxide, plastic, glossy_plastic, rubber, glass, pcb, clay, wood. turntable_frames > 0 also writes an orbiting animation (GIF, Blender only; use background_job=true and poll render_status). Look at the returned picture before reporting.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "objects": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "Default: every visible part."
+    },
+    "view": {
+     "type": "string",
+     "enum": [
+      "iso",
+      "hero",
+      "front",
+      "back",
+      "left",
+      "right",
+      "top",
+      "bottom",
+      "iso_back"
+     ],
+     "description": "Camera direction; 'hero' = lower, product-shot angle. Default iso."
+    },
+    "azimuth_deg": {
+     "type": "number",
+     "description": "Instead of view: 0 = front, 90 = right."
+    },
+    "elevation_deg": {
+     "type": "number",
+     "description": "With azimuth_deg; default 30."
+    },
+    "engine": {
+     "type": "string",
+     "enum": [
+      "auto",
+      "blender",
+      "quick"
+     ]
+    },
+    "quality": {
+     "type": "string",
+     "enum": [
+      "draft",
+      "final"
+     ],
+     "description": "draft: fast preview; final: more samples, finer mesh."
+    },
+    "width": {
+     "type": "integer",
+     "minimum": 64,
+     "maximum": 7680
+    },
+    "height": {
+     "type": "integer",
+     "minimum": 64,
+     "maximum": 7680
+    },
+    "materials": {
+     "type": "object",
+     "additionalProperties": {
+      "oneOf": [
+       {
+        "type": "string",
+        "description": "Preset name."
+       },
+       {
+        "type": "object",
+        "properties": {
+         "preset": {
+          "type": "string"
+         },
+         "color": {
+          "type": "string",
+          "description": "'#rrggbb' (plastic, anodized; tints metals too)."
+         },
+         "roughness": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+         },
+         "metallic": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+         }
+        }
+       }
+      ]
+     },
+     "description": "Object name/label -> preset or {preset, color, roughness, metallic}, e.g. {\"Plate\": \"anodized\", \"Cover\": {\"preset\": \"plastic\", \"color\": \"#ff6600\"}}."
+    },
+    "default_material": {
+     "oneOf": [
+      {
+       "type": "string",
+       "description": "Preset name."
+      },
+      {
+       "type": "object",
+       "properties": {
+        "preset": {
+         "type": "string"
+        },
+        "color": {
+         "type": "string",
+         "description": "'#rrggbb' (plastic, anodized; tints metals too)."
+        },
+        "roughness": {
+         "type": "number",
+         "minimum": 0,
+         "maximum": 1
+        },
+        "metallic": {
+         "type": "number",
+         "minimum": 0,
+         "maximum": 1
+        }
+       }
+      }
+     ]
+    },
+    "background": {
+     "type": "string",
+     "description": "'studio' (soft grey, default), 'white', 'transparent' or '#rrggbb'."
+    },
+    "turntable_frames": {
+     "type": "integer",
+     "minimum": 0,
+     "maximum": 240,
+     "description": "0 = still picture; e.g. 48 for an orbiting GIF."
+    },
+    "path": {
+     "type": "string",
+     "description": "PNG path (the GIF goes next to it)."
+    },
+    "background_job": {
+     "type": "boolean",
+     "description": "Blender only: return a job id at once, poll render_status (long renders, turntables)."
+    }
+   }
+  },
+  "mutates": true,
+  "destructive": false,
+  "idempotent": true,
+  "open_world": false,
+  "small": {
+   "description": "Realistic picture of the model (PNG).",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "objects": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Default: every visible part."
+     },
+     "view": {
+      "type": "string",
+      "enum": [
+       "iso",
+       "hero",
+       "front",
+       "back",
+       "left",
+       "right",
+       "top",
+       "bottom",
+       "iso_back"
+      ],
+      "description": "Camera direction; 'hero' = lower, product-shot angle. Default iso."
+     },
+     "materials": {
+      "type": "object",
+      "additionalProperties": {
+       "oneOf": [
+        {
+         "type": "string",
+         "description": "Preset name."
+        },
+        {
+         "type": "object",
+         "properties": {
+          "preset": {
+           "type": "string"
+          },
+          "color": {
+           "type": "string",
+           "description": "'#rrggbb' (plastic, anodized; tints metals too)."
+          },
+          "roughness": {
+           "type": "number",
+           "minimum": 0,
+           "maximum": 1
+          },
+          "metallic": {
+           "type": "number",
+           "minimum": 0,
+           "maximum": 1
+          }
+         }
+        }
+       ]
+      },
+      "description": "Object name/label -> preset or {preset, color, roughness, metallic}, e.g. {\"Plate\":…"
+     }
+    }
+   },
+   "group": "render"
+  }
+ },
+ {
+  "name": "render_status",
+  "title": "Render job status",
+  "description": "Check a render started with render(background_job=true). Returns 'running' or the result with the picture.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "job": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "job"
+   ]
+  },
+  "mutates": false,
+  "destructive": true,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Status of a background render job.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "job": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "job"
+    ]
+   },
+   "group": "render"
+  }
+ },
+ {
+  "name": "external_tools",
+  "title": "External programs (Blender, OpenSCAD, KiCad, build123d)",
+  "description": "Which other open-source programs CadAI can drive are installed: Blender (render), OpenSCAD, KiCad (kicad-cli), Python with build123d / CadQuery. Gives versions, or the install command for missing ones.",
+  "input_schema": {
+   "type": "object",
+   "properties": {}
+  },
+  "mutates": false,
+  "destructive": true,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Which external programs (Blender, OpenSCAD, KiCad...) are installed.",
+   "input_schema": {
+    "type": "object",
+    "properties": {}
+   },
+   "group": "codecad"
+  }
+ },
+ {
+  "name": "code_cad",
+  "title": "Code CAD (OpenSCAD, build123d, CadQuery)",
+  "description": "Make a part from code in another open-source CAD language and put it into the open FreeCAD document as a solid: OpenSCAD (.scad; mode 'brep' converts the CSG tree to exact FreeCAD solids — cylinders stay cylinders — 'mesh' goes through STL), build123d or CadQuery (Python, run in a separate Python, exact B-rep via STEP). Give code or a file. params override top-level variables (width = 40 → params {\"width\": 60}). For Python, assign the final shape to `result` (or call show_object). The source is stored in the object: replace=<object> with only params regenerates it with new values (keeps its placement); code_cad_source shows the code. Then verify with measure as usual.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "language": {
+     "type": "string",
+     "enum": [
+      "openscad",
+      "build123d",
+      "cadquery"
+     ],
+     "description": "Not needed for a .scad file or when replacing."
+    },
+    "code": {
+     "type": "string"
+    },
+    "file": {
+     "type": "string",
+     "description": "Path to a .scad or .py file (its folder is the working directory, so include/use/import work)."
+    },
+    "params": {
+     "type": "object",
+     "description": "Top-level variable overrides (numbers, text, lists)."
+    },
+    "name": {
+     "type": "string",
+     "description": "Name/label of the new object."
+    },
+    "replace": {
+     "type": "string",
+     "description": "Object made earlier by code_cad to regenerate."
+    },
+    "mode": {
+     "type": "string",
+     "enum": [
+      "brep",
+      "mesh"
+     ],
+     "description": "OpenSCAD only; default brep."
+    }
+   }
+  },
+  "mutates": true,
+  "destructive": false,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Make a solid from OpenSCAD / build123d / CadQuery code.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "language": {
+      "type": "string",
+      "enum": [
+       "openscad",
+       "build123d",
+       "cadquery"
+      ],
+      "description": "Not needed for a .scad file or when replacing."
+     },
+     "code": {
+      "type": "string"
+     },
+     "file": {
+      "type": "string",
+      "description": "Path to a .scad or .py file (its folder is the working directory, so…"
+     },
+     "params": {
+      "type": "object",
+      "description": "Top-level variable overrides (numbers, text, lists)."
+     },
+     "name": {
+      "type": "string",
+      "description": "Name/label of the new object."
+     },
+     "replace": {
+      "type": "string",
+      "description": "Object made earlier by code_cad to regenerate."
+     }
+    }
+   },
+   "group": "codecad"
+  }
+ },
+ {
+  "name": "code_cad_source",
+  "title": "Source of a code-made part",
+  "description": "Show the source code, language and parameters of a part made by code_cad.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "object": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "object"
+   ]
+  },
+  "mutates": false,
+  "destructive": true,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Show the code a code_cad object was made from.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "object": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "object"
+    ]
+   },
+   "group": "codecad"
+  }
+ },
+ {
+  "name": "kicad_board",
+  "title": "Import KiCad board",
+  "description": "Import a KiCad PCB (.kicad_pcb) as 3D: the board and its component models (kicad-cli STEP export), board centre at XY 0 and bottom at z 0. Returns board size and thickness, mounting holes, connectors and component positions in the same coordinates — use them to design an enclosure around the board (standoffs, connector cut-outs).",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "file": {
+     "type": "string",
+     "description": "Path to the .kicad_pcb file."
+    },
+    "name": {
+     "type": "string"
+    },
+    "components": {
+     "type": "boolean",
+     "description": "Include component 3D models (default true)."
+    },
+    "include_tracks": {
+     "type": "boolean",
+     "description": "Also copper tracks and pads (slower)."
+    },
+    "position": {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "minItems": 3,
+     "maxItems": 3,
+     "description": "Where the board's bottom centre goes (mm)."
+    }
+   },
+   "required": [
+    "file"
+   ]
+  },
+  "mutates": true,
+  "destructive": false,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Import a KiCad PCB with components; gives board size, holes, connectors.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "file": {
+      "type": "string",
+      "description": "Path to the .kicad_pcb file."
+     },
+     "position": {
+      "type": "array",
+      "items": {
+       "type": "number"
+      },
+      "minItems": 3,
+      "maxItems": 3,
+      "description": "Where the board's bottom centre goes (mm)."
+     }
+    },
+    "required": [
+     "file"
+    ]
+   },
+   "group": "kicad"
+  }
+ },
+ {
+  "name": "set_design_requirements",
+  "title": "Tasarım şartlarını kaydet",
+  "description": "Save user-requested design requirements in the FCStd document. Upsert by id; other requirements stay. Only update/remove a target when the user changes it, never to hide a failed check. Checks measure actual geometry: world-axis bounding sizes, solid volume/count, distance, interference_volume, hole count, all hole diameters and all hole center-to-bounding-box-edge offsets. Holes: closed cylinders along axis; not slots/cones/split surfaces. Always pair per-hole checks with a hole_count requirement. Relations compare same-unit measurements: target = factor * reference + value. Checks detect violations; they do not constrain or automatically repair geometry. No arbitrary code.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "requirements": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "properties": {
+       "id": {
+        "type": "string",
+        "description": "Stable short ID; reusing it updates just this requirement."
+       },
+       "measure": {
+        "type": "object",
+        "properties": {
+         "object": {
+          "type": "string"
+         },
+         "metric": {
+          "type": "string",
+          "enum": [
+           "bbox_x",
+           "bbox_y",
+           "bbox_z",
+           "volume",
+           "solid_count",
+           "min_distance",
+           "interference_volume",
+           "hole_count",
+           "hole_diameter",
+           "hole_edge_offset"
+          ]
+         },
+         "other": {
+          "type": "string",
+          "description": "Second object for min_distance/interference_volume."
+         },
+         "axis": {
+          "type": "string",
+          "enum": [
+           "x",
+           "y",
+           "z"
+          ],
+          "description": "World hole axis, default z."
+         },
+         "edge_axis": {
+          "type": "string",
+          "enum": [
+           "x",
+           "y",
+           "z"
+          ],
+          "description": "hole_edge_offset: center to nearest bounding-box side along this axis."
+         }
+        },
+        "required": [
+         "object",
+         "metric"
+        ],
+        "additionalProperties": false
+       },
+       "operator": {
+        "type": "string",
+        "enum": [
+         "eq",
+         "min",
+         "max"
+        ]
+       },
+       "value": {
+        "type": "number",
+        "description": "Target, or offset when reference is set. mm, mm3 or count."
+       },
+       "tolerance": {
+        "type": "number",
+        "minimum": 0,
+        "description": "Absolute tolerance; default 0.01, count 0."
+       },
+       "reference": {
+        "type": "object",
+        "properties": {
+         "object": {
+          "type": "string"
+         },
+         "metric": {
+          "type": "string",
+          "enum": [
+           "bbox_x",
+           "bbox_y",
+           "bbox_z",
+           "volume",
+           "solid_count",
+           "min_distance",
+           "interference_volume",
+           "hole_count",
+           "hole_diameter",
+           "hole_edge_offset"
+          ]
+         },
+         "other": {
+          "type": "string",
+          "description": "Second object for min_distance/interference_volume."
+         },
+         "axis": {
+          "type": "string",
+          "enum": [
+           "x",
+           "y",
+           "z"
+          ],
+          "description": "World hole axis, default z."
+         },
+         "edge_axis": {
+          "type": "string",
+          "enum": [
+           "x",
+           "y",
+           "z"
+          ],
+          "description": "hole_edge_offset: center to nearest bounding-box side along this axis."
+         }
+        },
+        "required": [
+         "object",
+         "metric"
+        ],
+        "additionalProperties": false
+       },
+       "factor": {
+        "type": "number",
+        "description": "Target = factor * reference measurement + value; default 1."
+       }
+      },
+      "required": [
+       "id",
+       "measure",
+       "value"
+      ],
+      "additionalProperties": false
+     },
+     "maxItems": 20
+    },
+    "remove_ids": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    }
+   },
+   "required": [
+    "requirements"
+   ]
+  },
+  "mutates": true,
+  "destructive": true,
+  "idempotent": true,
+  "open_world": false,
+  "small": {
+   "description": "Save user targets by id; preserve other targets. Never change targets to hide failure.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "requirements": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string",
+         "description": "Stable short ID; reusing it updates just this requirement."
+        },
+        "measure": {
+         "type": "object",
+         "properties": {
+          "object": {
+           "type": "string"
+          },
+          "metric": {
+           "type": "string",
+           "enum": [
+            "bbox_x",
+            "bbox_y",
+            "bbox_z",
+            "volume",
+            "solid_count",
+            "min_distance",
+            "interference_volume",
+            "hole_count",
+            "hole_diameter",
+            "hole_edge_offset"
+           ]
+          },
+          "other": {
+           "type": "string",
+           "description": "Second object for min_distance/interference_volume."
+          },
+          "axis": {
+           "type": "string",
+           "enum": [
+            "x",
+            "y",
+            "z"
+           ],
+           "description": "World hole axis, default z."
+          },
+          "edge_axis": {
+           "type": "string",
+           "enum": [
+            "x",
+            "y",
+            "z"
+           ],
+           "description": "hole_edge_offset: center to nearest bounding-box side along this axis."
+          }
+         },
+         "required": [
+          "object",
+          "metric"
+         ],
+         "additionalProperties": false
+        },
+        "operator": {
+         "type": "string",
+         "enum": [
+          "eq",
+          "min",
+          "max"
+         ]
+        },
+        "value": {
+         "type": "number",
+         "description": "Target, or offset when reference is set. mm, mm3 or count."
+        },
+        "tolerance": {
+         "type": "number",
+         "minimum": 0,
+         "description": "Absolute tolerance; default 0.01, count 0."
+        },
+        "reference": {
+         "type": "object",
+         "properties": {
+          "object": {
+           "type": "string"
+          },
+          "metric": {
+           "type": "string",
+           "enum": [
+            "bbox_x",
+            "bbox_y",
+            "bbox_z",
+            "volume",
+            "solid_count",
+            "min_distance",
+            "interference_volume",
+            "hole_count",
+            "hole_diameter",
+            "hole_edge_offset"
+           ]
+          },
+          "other": {
+           "type": "string",
+           "description": "Second object for min_distance/interference_volume."
+          },
+          "axis": {
+           "type": "string",
+           "enum": [
+            "x",
+            "y",
+            "z"
+           ],
+           "description": "World hole axis, default z."
+          },
+          "edge_axis": {
+           "type": "string",
+           "enum": [
+            "x",
+            "y",
+            "z"
+           ],
+           "description": "hole_edge_offset: center to nearest bounding-box side along this axis."
+          }
+         },
+         "required": [
+          "object",
+          "metric"
+         ],
+         "additionalProperties": false
+        },
+        "factor": {
+         "type": "number",
+         "description": "Target = factor * reference measurement + value; default 1."
+        }
+       },
+       "required": [
+        "id",
+        "measure",
+        "value"
+       ],
+       "additionalProperties": false
+      },
+      "maxItems": 20
+     },
+     "remove_ids": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     }
+    },
+    "required": [
+     "requirements"
+    ]
+   },
+   "group": "requirements"
+  }
+ },
+ {
+  "name": "check_design_requirements",
+  "title": "Tasarım şartlarını doğrula",
+  "description": "Check saved design requirements against current geometry. Returns pass/fail/error, measured and expected values, tolerance, units and resolved objects. Read-only; never executes stored text. not_configured means no requirements were checked, NOT a pass. Call before declaring a design complete.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "ids": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "Optional subset; partial report."
+    },
+    "include_definitions": {
+     "type": "boolean",
+     "description": "Include saved rules for editing/review."
+    }
+   }
+  },
+  "mutates": false,
+  "destructive": true,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Measure saved design targets; report pass/fail/error. Does not change geometry.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "ids": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Optional subset; partial report."
+     },
+     "include_definitions": {
+      "type": "boolean",
+      "description": "Include saved rules for editing/review."
+     }
+    }
+   },
+   "group": "core"
+  }
+ },
+ {
+  "name": "inspect_holes",
+  "title": "Delikleri incele",
+  "description": "Find closed cylindrical bores along world axis x/y/z (default z). Return centers, diameters, axial ranges and face names. Partial cylinders, slots and cones are excluded; coaxial adjacent sections are grouped. Use with hole_count/diameter/edge-offset requirements.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "object": {
+     "type": "string"
+    },
+    "axis": {
+     "type": "string",
+     "enum": [
+      "x",
+      "y",
+      "z"
+     ]
+    }
+   },
+   "required": [
+    "object"
+   ]
+  },
+  "mutates": false,
+  "destructive": true,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Measure closed cylindrical bores: count, centers, diameters, face names. axis defaults to z.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "object": {
+      "type": "string"
+     },
+     "axis": {
+      "type": "string",
+      "enum": [
+       "x",
+       "y",
+       "z"
+      ]
+     }
+    },
+    "required": [
+     "object"
+    ]
+   },
+   "group": "holes"
+  }
+ },
+ {
+  "name": "export_design_report",
+  "title": "Tasarım denetim raporu",
+  "description": "Export a timestamped JSON report of all saved rules, measurements and failures. A report may contain failed/error/unconfigured checks; exporting is not certification.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "path": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "path"
+   ]
+  },
+  "mutates": true,
+  "destructive": true,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Save all design requirements and measured results to a .json report.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "path"
+    ]
+   },
+   "group": "report"
+  }
+ },
+ {
+  "name": "set_parameter_relation",
+  "title": "Parametre ilişkisini koru",
+  "description": "Preserve a numeric parameter relation using native FreeCAD expressions: target = factor * reference + offset. Same units only (mm, deg or dimensionless). Supports dimension properties and Placement.Base.x/y/z. No arbitrary expressions/code. remove=true detaches the relation, retaining the current value. Use actual source parameters from get_document_summary. Cycles/errors roll back.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "object": {
+     "type": "string"
+    },
+    "property": {
+     "type": "string"
+    },
+    "reference_object": {
+     "type": "string"
+    },
+    "reference_property": {
+     "type": "string"
+    },
+    "factor": {
+     "type": "number"
+    },
+    "offset": {
+     "type": "number"
+    },
+    "remove": {
+     "type": "boolean"
+    }
+   },
+   "required": [
+    "object",
+    "property"
+   ]
+  },
+  "mutates": true,
+  "destructive": true,
+  "idempotent": true,
+  "open_world": false,
+  "small": {
+   "description": "Keep target parameter = factor * reference parameter + offset using FreeCAD expressions.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "object": {
+      "type": "string"
+     },
+     "property": {
+      "type": "string"
+     },
+     "reference_object": {
+      "type": "string"
+     },
+     "reference_property": {
+      "type": "string"
+     },
+     "factor": {
+      "type": "number"
+     },
+     "offset": {
+      "type": "number"
+     },
+     "remove": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "object",
+     "property"
+    ]
+   },
+   "group": "requirements"
+  }
+ },
+ {
+  "name": "add_mounting_plate",
+  "title": "Parametrik bağlantı plakası",
+  "description": "Create a parametric rectangular XY mounting plate with four through holes. Edge offsets are hole-center distances in mm. Native FreeCAD expressions keep holes at their offsets when Length/Width/Height or HoleDiameter/EdgeOffsetX/EdgeOffsetY change on parameters_object. No standard catalog parts.",
+  "input_schema": {
+   "type": "object",
+   "properties": {
+    "length": {
+     "type": "number",
+     "exclusiveMinimum": 0
+    },
+    "width": {
+     "type": "number",
+     "exclusiveMinimum": 0
+    },
+    "thickness": {
+     "type": "number",
+     "exclusiveMinimum": 0
+    },
+    "hole_diameter": {
+     "type": "number",
+     "exclusiveMinimum": 0
+    },
+    "edge_offset_x": {
+     "type": "number",
+     "exclusiveMinimum": 0
+    },
+    "edge_offset_y": {
+     "type": "number",
+     "exclusiveMinimum": 0
+    },
+    "name": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "length",
+    "width",
+    "thickness",
+    "hole_diameter",
+    "edge_offset_x",
+    "edge_offset_y"
+   ]
+  },
+  "mutates": true,
+  "destructive": false,
+  "idempotent": false,
+  "open_world": false,
+  "small": {
+   "description": "Rectangular plate, four through holes; preserves hole edge offsets when dimensions change.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "length": {
+      "type": "number",
+      "exclusiveMinimum": 0
+     },
+     "width": {
+      "type": "number",
+      "exclusiveMinimum": 0
+     },
+     "thickness": {
+      "type": "number",
+      "exclusiveMinimum": 0
+     },
+     "hole_diameter": {
+      "type": "number",
+      "exclusiveMinimum": 0
+     },
+     "edge_offset_x": {
+      "type": "number",
+      "exclusiveMinimum": 0
+     },
+     "edge_offset_y": {
+      "type": "number",
+      "exclusiveMinimum": 0
+     },
+     "name": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "length",
+     "width",
+     "thickness",
+     "hole_diameter",
+     "edge_offset_x",
+     "edge_offset_y"
+    ]
+   },
+   "group": "plate"
+  }
+ }
+]

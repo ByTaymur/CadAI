@@ -1,0 +1,27 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "CadAI: testleri çalıştır",
+      "type": "process",
+      "command": "C:\\Program Files\\FreeCAD 1.1\\bin\\freecadcmd.exe",
+      "args": ["${workspaceFolder}\\freecad\\CadAI\\tests\\run_tests.py"],
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "CadAI: VS Code eklentisini paketle ve kur",
+      "type": "shell",
+      "command": "& 'C:\\Program Files\\FreeCAD 1.1\\bin\\python.exe' '${workspaceFolder}\\vscode\\cadai-vscode\\build_vsix.py'; code --install-extension '${workspaceFolder}\\vscode\\cadai-vscode\\dist\\cadai-latest.vsix' --force",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "CadAI: FreeCAD'i aç",
+      "type": "process",
+      "command": "C:\\Program Files\\FreeCAD 1.1\\bin\\freecad.exe",
+      "isBackground": true,
+      "problemMatcher": []
+    }
+  ]
+}

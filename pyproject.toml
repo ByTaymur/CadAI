@@ -1,0 +1,31 @@
+# Tooling only: the FreeCAD add-on is not a pip package (FreeCAD loads it from its Mod folder).
+[project]
+name = "cadai"
+version = "0.16.2"
+description = "AI-assisted engineering design in FreeCAD + VS Code: show-and-describe markers, FEM, DFM, MCP."
+license = "LGPL-2.1-or-later"
+requires-python = ">=3.9"  # the MCP server runs on any Python 3.9+; the add-on on FreeCAD's own Python
+
+[tool.ruff]
+line-length = 130
+target-version = "py39"
+extend-exclude = ["vscode/cadai-vscode/node_modules"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "I", "UP", "RUF100"]
+ignore = [
+    "B008",   # calls in defaults are fine for FreeCAD Vectors built at import time
+    "B904",   # tools re-raise ToolError on purpose: the model gets a clean message, not a chained traceback
+    "UP006", "UP007", "UP035", "UP045",  # keep 3.9-compatible typing spellings
+]
+
+[tool.ruff.lint.per-file-ignores]
+# tests import FreeCAD/cadai after sys.path / config tweaks on purpose
+"freecad/CadAI/tests/*" = ["E402"]
+"vscode/cadai-vscode/test/*" = ["E402"]
+"freecad/CadAI/cadai/prompts.py" = ["E501"]  # system prompt text
+
+[tool.ruff.lint.isort]
+known-first-party = ["cadai"]
+known-third-party = ["FreeCAD", "FreeCADGui", "Part", "Mesh", "MeshPart", "Import", "ObjectsFem", "femtools", "femmesh",
+                     "Sketcher", "PySide", "numpy"]
