@@ -15,6 +15,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SERVER = os.path.join(os.path.dirname(HERE), "mcp_server", "cadai_mcp.py")
 sys.path.insert(0, os.path.dirname(SERVER))
 
+# These suites test the single-program servers; auto mode (default) has its own end-to-end tests.
+os.environ.setdefault("CADAI_BACKEND", "freecad")
 import cadai_mcp as mcp
 
 TOKEN = "test-token"
@@ -112,7 +114,7 @@ class LegacyClient(unittest.TestCase):
     def test_initialize_negotiates_a_supported_version(self):
         res = rpc("initialize", {"protocolVersion": "2025-06-18"})["result"]
         self.assertEqual(res["protocolVersion"], "2025-06-18")
-        self.assertEqual(res["serverInfo"]["name"], "cadai-freecad")
+        self.assertEqual(res["serverInfo"]["name"], "cadai")
         self.assertIn("get_selection", res["instructions"])
         self.assertEqual(set(res["capabilities"]), {"tools", "resources", "prompts"})
         # an unknown version is answered with our latest legacy one, never echoed back
@@ -142,7 +144,7 @@ class ModernClient(unittest.TestCase):
         self.assertEqual(res["resultType"], "complete")
         self.assertIn("2026-07-28", res["supportedVersions"])
         self.assertIn("2025-11-25", res["supportedVersions"])
-        self.assertEqual(res["_meta"]["io.modelcontextprotocol/serverInfo"]["name"], "cadai-freecad")
+        self.assertEqual(res["_meta"]["io.modelcontextprotocol/serverInfo"]["name"], "cadai")
         self.assertIn("tools", res["capabilities"])
         self.assertGreater(res["ttlMs"], 0)
         self.assertIn(res["cacheScope"], ("public", "private"))

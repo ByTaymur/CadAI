@@ -1,5 +1,9 @@
 # CadAI — point at your part, describe the change, let AI do it
 
+**Multiple CAD backends:** FreeCAD remains the validated backend. Version 0.17.0 adds a shared adapter transport, explicit CAD session selection and an **Fusion 360 adapter**; since 0.18.0 its root-part editing tools (box, cylinder, hole, fillet, chamfer, boolean, move, parameters, undo/redo, STEP export) are verified end-to-end in a real Fusion session with `fusion/tests/live_smoke.py`. See [Fusion setup and limits](fusion/README.md) and [the adapter architecture](docs/multi-cad-architecture.md). SolidWorks remains a future adapter.
+
+Version 0.17.2 also displays B-rep bodies in nested/repeated Fusion component instances, with assembly placement, selection, measurements and markers. Assembly geometry editing and mesh bodies remain unsupported; the in-Fusion assembly smoke script has not yet been run in real Fusion.
+
 **CadAI** brings FreeCAD into VS Code and lets any AI coding agent edit real CAD models. Instead of describing
 geometry in words, you **show** it: put numbered markers, dimensions, lines, circles or freehand strokes directly on
 the 3D model, write what you want there ("make this hole Ø10", "this distance should be 40 mm"), and send it to the
@@ -12,7 +16,9 @@ agent you already use — **Claude Code, Codex, Cline, Kilo Code or GitHub Copil
   (see [CADGenBench](https://github.com/huggingface/cadgenbench)). CadAI gives them exact coordinates and the
   face/edge/vertex under every marker.
 - **No FreeCAD UI needed.** FreeCAD runs minimized as the geometry engine; you work in VS Code.
-- **Any agent.** Everything goes through one MCP server (`cadai-freecad`), so the same tools work in every agent.
+- **Any agent.** Everything goes through one MCP server (`cadai`), so the same tools work in every agent. It finds the
+  running CAD program by itself (FreeCAD or Fusion 360), follows the session chosen in VS Code when both are open and
+  updates the agent's tool list when the program changes.
 - **Engineering, not just shapes.** Parametric edits, measurements, FEM analysis (Gmsh + CalculiX) with
   hand-calculation, force-balance and mesh-convergence checks, and design-for-manufacturing checks with measured
   evidence.
@@ -64,7 +70,7 @@ agent you already use — **Claude Code, Codex, Cline, Kilo Code or GitHub Copil
   FreeCAD recipes**, FEM (+ convergence study), DFM, standard parts, technical drawings, export
   STEP/IGES/BREP/GLB/STL/3MF
 - MCP server speaks the current spec (2026-07-28, stateless) and older clients; tools carry read-only/destructive
-  hints so agents can auto-approve safe ones; prompts appear as slash commands (e.g. `/mcp__cadai-freecad__apply_markers`)
+  hints so agents can auto-approve safe ones; prompts appear as slash commands (e.g. `/mcp__cadai__apply_markers`)
 - VS Code registers the server natively (Copilot agent mode sees it without editing `mcp.json`)
 - FreeCAD side panel with its own agent for local (Ollama, LM Studio) or cloud models
 
@@ -72,7 +78,7 @@ agent you already use — **Claude Code, Codex, Cline, Kilo Code or GitHub Copil
 1. Install **FreeCAD 1.0+** ([download](https://www.freecad.org/downloads.php)).
 2. Install the **CadAI** VS Code extension (Marketplace / Open VSX, or the `.vsix` from Releases).
 3. In VS Code open the **CadAI** sidebar → **Start FreeCAD**. The extension installs its FreeCAD add-on
-   automatically and offers **Connect AI agents**, which registers the `cadai-freecad` MCP server with the agents
+   automatically and offers **Connect AI agents**, which registers the `cadai` MCP server with the agents
    you have installed.
 
 Tested on Windows 11/10 with FreeCAD 1.1. macOS and Linux support is implemented but **experimental** — reports welcome.
@@ -89,7 +95,7 @@ VS Code ─ CadAI extension (3D view, markers, tree, FEM wizard)
    │                                  │
    │  AI agent (Claude Code, Codex,   │ local HTTP bridge (127.0.0.1 + token)
    │  Cline, Kilo, Copilot)           │
-   └── MCP: cadai-freecad ────────────┴──► FreeCAD + CadAI add-on (tools run on the live document)
+   └── MCP: cadai ────────────────────┴──► FreeCAD or Fusion 360 + CadAI add-on (tools run on the live document)
 ```
 
 ## Repository layout

@@ -9,11 +9,12 @@ import os
 import zipfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-INCLUDE = ["package.json", "extension.js", "bridge.js", "agents.js", "freecad.js", "mcp_setup.js", "gpu.js", "history_tree.js",
+INCLUDE = ["package.json", "extension.js", "bridge.js", "agents.js", "freecad.js", "mcp_setup.js", "fusion_setup.js", "gpu.js", "history_tree.js",
            "README.md", "LICENSE.txt", "media"]
 # the FreeCAD add-on ships inside the extension and is installed into FreeCAD on first run
 ADDON_SRC = os.path.join(HERE, "..", "..", "freecad", "CadAI")
 ADDON_DST = "extension/freecad-addon/CadAI"
+FUSION_SRC = os.path.join(HERE, "..", "..", "fusion", "CadAI")
 
 CONTENT_TYPES = """<?xml version="1.0" encoding="utf-8"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
@@ -22,8 +23,10 @@ CONTENT_TYPES = """<?xml version="1.0" encoding="utf-8"?>
 <Default Extension=".html" ContentType="text/html"/><Default Extension=".md" ContentType="text/markdown"/>
 <Default Extension=".txt" ContentType="text/plain"/><Default Extension=".vsixmanifest" ContentType="text/xml"/>
 <Default Extension=".py" ContentType="text/x-python"/><Default Extension=".xml" ContentType="text/xml"/>
+<Default Extension=".manifest" ContentType="application/json"/>
 <Default Extension=".png" ContentType="image/png"/>
 <Override PartName="/extension/freecad-addon/CadAI/LICENSE" ContentType="text/plain"/>
+<Override PartName="/extension/fusion-addon/CadAI/LICENSE" ContentType="text/plain"/>
 </Types>"""
 
 MANIFEST = """<?xml version="1.0" encoding="utf-8"?>
@@ -69,6 +72,8 @@ def main():
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("[Content_Types].xml", CONTENT_TYPES)
         z.writestr("extension.vsixmanifest", manifest)
+        z.write(os.path.join(FUSION_SRC, "..", "README.md"), "extension/fusion-addon/CadAI/README.md")
+        z.write(os.path.join(ADDON_SRC, "LICENSE"), "extension/fusion-addon/CadAI/LICENSE")
         for item in INCLUDE:
             src = os.path.join(HERE, item)
             if os.path.isdir(src):
@@ -83,6 +88,14 @@ def main():
             for name in files:
                 full = os.path.join(root, name)
                 z.write(full, ADDON_DST + "/" + os.path.relpath(full, ADDON_SRC).replace(os.sep, "/"))
+        for src, dst in ((FUSION_SRC, "extension/fusion-addon/CadAI"),
+                         (os.path.join(ADDON_SRC, "cadai_core"), "extension/fusion-addon/CadAI/cadai_core")):
+            for root, dirs, files in os.walk(src):
+                dirs[:] = [d for d in dirs if d != "__pycache__"]
+                for name in files:
+                    if name.endswith((".py", ".manifest")):
+                        z.write(os.path.join(root, name), dst + "/" +
+                                os.path.relpath(os.path.join(root, name), src).replace(os.sep, "/"))
     latest = os.path.join(HERE, "dist", "cadai-latest.vsix")
     with open(out, "rb") as src_f, open(latest, "wb") as dst_f:
         dst_f.write(src_f.read())

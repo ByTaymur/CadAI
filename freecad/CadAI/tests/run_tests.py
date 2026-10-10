@@ -535,10 +535,12 @@ def bridge_and_mcp_protocol():
         {"jsonrpc": "2.0", "id": i, "method": method, "params": params or {}}, client)
     try:
         init = rpc(1, "initialize", {"protocolVersion": "2025-06-18"})["result"]
-        assert init["serverInfo"]["name"] == "cadai-freecad" and "get_selection" in init["instructions"]
+        # default auto mode: one `cadai` server that finds the running FreeCAD (or Fusion) by itself
+        assert init["serverInfo"]["name"] == "cadai" and "get_selection" in init["instructions"]
+        assert init["capabilities"]["tools"]["listChanged"]
         assert mcp.handle({"jsonrpc": "2.0", "method": "notifications/initialized"}, client) is None
         names = {t["name"] for t in rpc(2, "tools/list")["result"]["tools"]}
-        assert {"freecad_bridge_status", "find_faces", "fem_run", "fem_status"} <= names
+        assert {"cad_bridge_status", "cad_select_session", "find_faces", "fem_run", "fem_status"} <= names
         res = rpc(3, "tools/call", {"name": "set_property",
                                     "arguments": {"object": "Beam", "property": "Height", "value": "12 mm"}})["result"]
         assert not res["isError"], res
@@ -1392,6 +1394,38 @@ sys.path.insert(0, os.path.join(ADDON_DIR, "tests"))
 from test_design_requirements import run_tests as run_requirement_tests
 
 run_requirement_tests(test, call, fresh_beam, REG)
+
+@test
+def adapter_targets_follow_document_identity_not_document_name():
+    from cadai_core.contract import check_target
+
+    from cadai import session, ui_actions
+
+    doc = fresh_beam()
+    first = dict(session.document_context(), backend_id="freecad", session_id="test")
+    assert session.document_context()["document_id"] == first["document_id"]
+    original_name = doc.Name
+    FreeCAD.closeDocument(original_name)
+    FreeCAD.newDocument(original_name)
+    second = dict(session.document_context(), backend_id="freecad", session_id="test")
+    assert second["document_name"] == first["document_name"]
+    assert second["document_id"] != first["document_id"]
+    try:
+        check_target(first, second)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("same-name reopened documents must not accept old requests")
+    current = dict(second)
+    ui_actions._bump("doc")
+    changed = dict(session.document_context(), backend_id="freecad", session_id="test")
+    try:
+        check_target(current, changed)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("old-revision requests must fail before editing")
+
 
 failed = [n for n, err in RESULTS if err]
 print(f"\n{len(RESULTS) - len(failed)}/{len(RESULTS)} passed")

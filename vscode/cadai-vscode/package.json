@@ -1,8 +1,8 @@
 {
   "name": "cadai",
-  "displayName": "CadAI — FreeCAD + Yapay Zekâ",
-  "description": "Point at your FreeCAD part in VS Code, describe the change, and let any AI agent (Claude Code, Codex, Cline, Kilo, Copilot) do it. 3D view, markers, FEM with color maps, DFM checks, 16k standard parts, MCP.",
-  "version": "0.16.2",
+  "displayName": "CadAI — CAD + Yapay Zekâ",
+  "description": "AI-assisted CAD in VS Code: validated FreeCAD tools, experimental Fusion 360 adapter, explicit session selection, 3D view, markers, MCP.",
+  "version": "0.19.3",
   "publisher": "taymur",
   "license": "LGPL-2.1-or-later",
   "icon": "media/icon.png",
@@ -318,6 +318,21 @@
         "title": "Sil",
         "category": "CadAI",
         "icon": "$(trash)"
+      },
+      {
+        "command": "cadai.selectCADSession",
+        "title": "CAD oturumunu se? (FreeCAD / Fusion)",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.connectFusion",
+        "title": "Fusion'a bağlan",
+        "category": "CadAI"
+      },
+      {
+        "command": "cadai.setupFusion",
+        "title": "Fusion 360 eklentisini kur / g?ncelle (deneysel)",
+        "category": "CadAI"
       }
     ],
     "menus": {
@@ -356,7 +371,7 @@
       "view/item/context": [
         {
           "command": "cadai.tree.editDimension",
-          "when": "view == cadai.tree && viewItem == cadaiObjectDims",
+          "when": "view == cadai.tree && viewItem =~ /Dims$/",
           "group": "inline"
         },
         {
@@ -366,7 +381,7 @@
         },
         {
           "command": "cadai.tree.editDimension",
-          "when": "view == cadai.tree && viewItem == cadaiObjectDims",
+          "when": "view == cadai.tree && viewItem =~ /Dims$/",
           "group": "1_edit"
         },
         {
@@ -487,7 +502,12 @@
         "cadai.mcp.toolset": {
           "type": "string",
           "default": "full",
-          "enum": ["full", "small", "small+fem+drawing", "small+all"],
+          "enum": [
+            "full",
+            "small",
+            "small+fem+drawing",
+            "small+all"
+          ],
           "enumDescriptions": [
             "Tüm araçlar, ayrıntılı açıklamalar (Claude, GPT, büyük modeller).",
             "Küçük yerel modeller (7-14B, ör. Ollama ile Cline): ~20 araç, kısa açıklama ve şema; kodsuz modelleme araçları, parça kataloğu, dışa aktarma.",
@@ -564,8 +584,8 @@
     ],
     "mcpServerDefinitionProviders": [
       {
-        "id": "cadai.freecad",
-        "label": "CadAI · FreeCAD"
+        "id": "cadai.mcp",
+        "label": "CadAI (FreeCAD / Fusion 360)"
       }
     ]
   },

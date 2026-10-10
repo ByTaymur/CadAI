@@ -13,6 +13,8 @@ THREE.BufferGeometry.prototype.disposeBoundsTree = THREE.disposeBoundsTree;
 THREE.Mesh.prototype.raycast = THREE.acceleratedRaycast;
 
 const vscode = acquireVsCodeApi();
+let viewTarget = null;
+function send(message) { vscode.postMessage(viewTarget ? { ...message, target: viewTarget } : message); }
 const $ = (id) => document.getElementById(id);
 
 // ---------------- GPU: any vendor, any class ----------------
@@ -44,14 +46,14 @@ function showGlNotice(text, reload = true) {
   $('glReload').classList.toggle('hidden', !reload);
   $('glNotice').classList.remove('hidden');
 }
-$('glReload').onclick = () => vscode.postMessage({ type: 'reloadViewer' });
-$('glDiag').onclick = () => vscode.postMessage({ type: 'command', command: 'cadai.gpuDiagnostics' });
+$('glReload').onclick = () => send({ type: 'reloadViewer' });
+$('glDiag').onclick = () => send({ type: 'command', command: 'cadai.gpuDiagnostics' });
 
 if (!renderer) {
   showGlNotice('3B görünüm açılamadı: bu bilgisayarda WebGL 2 kullanılamıyor.\n'
     + 'Genelde nedeni eksik ya da eski ekran kartı sürücüsü, VS Code\'da kapalı donanım hızlandırması, uzak masaüstü '
     + 'veya sanal makinedir. "GPU tanılaması" nedenini ve çözümünü gösterir.', false);
-  vscode.postMessage({ type: 'ready', gl: null, glError });
+  send({ type: 'ready', gl: null, glError });
   await new Promise(() => {}); // stop here: everything below needs a renderer (modules may await at top level)
 }
 renderer.localClippingEnabled = true;
@@ -66,16 +68,16 @@ renderer.domElement.addEventListener('webglcontextlost', (e) => {
   frameGaps.length = 0;
   showGlNotice('Ekran kartı sürücüsü 3B görünümü sıfırladı (sürücü güncellemesi, uyku, GPU değişimi ya da aşırı yük).\n'
     + 'Görünüm kendiliğinden geri gelir; gelmezse yeniden yükleyin.');
-  vscode.postMessage({ type: 'glLost' });
+  send({ type: 'glLost' });
 });
 renderer.domElement.addEventListener('webglcontextrestored', () => {
   contextLost = false;
   glStart = glInfo() || glStart;
   softwareGl = SOFTWARE_GL.test(glStart.renderer || '');
   resize();
-  vscode.postMessage({ type: 'glRestored', gl: { ...glStart, pixelRatio: quality.ratio } });
+  send({ type: 'glRestored', gl: { ...glStart, pixelRatio: quality.ratio } });
   $('glNotice').classList.add('hidden');
-  vscode.postMessage({ type: 'needFullScene' });
+  send({ type: 'needFullScene' });
   requestRender();
 });
 
@@ -341,7 +343,7 @@ function knownKeys() { return [...objectCache.keys()]; }
 
 function buildScene(data) {
   const missing = data.objects.filter((o) => o.same && !objectCache.has(o.key));
-  if (missing.length) { vscode.postMessage({ type: 'needFullScene' }); return; } // the viewer lost its cache: resync
+  if (missing.length) { send({ type: 'needFullScene' }); return; } // the viewer lost its cache: resync
   for (const b of legacyBuilt.splice(0)) disposeBuilt(b);
   const keep = new Set(data.objects.map((o) => o.key).filter(Boolean));
   for (const [key, b] of objectCache) if (!keep.has(key)) { disposeBuilt(b); objectCache.delete(key); }
@@ -882,7 +884,7 @@ function cancelPending() {
 $('noteForm').addEventListener('submit', (e) => {
   e.preventDefault();
   if (!pending) return;
-  vscode.postMessage({ type: 'addMarker', marker: Object.assign({}, pending, { note: $('noteInput').value.trim() }) });
+  send({ type: 'addMarker', marker: Object.assign({}, pending, { note: $('noteInput').value.trim() }) });
   cancelPending();
 });
 $('noteCancel').onclick = cancelPending;
@@ -960,8 +962,8 @@ renderer.domElement.addEventListener('pointerup', (e) => {
     if (result) return;
     const hit = faceHit(e);
     const additive = e.ctrlKey || e.shiftKey || e.metaKey;
-    if (hit) { const f = faceOf(hit); vscode.postMessage({ type: 'pick', object: f.object, sub: f.face, additive }); }
-    else if (!additive) vscode.postMessage({ type: 'pick', object: null });
+    if (hit) { const f = faceOf(hit); send({ type: 'pick', object: f.object, sub: f.face, additive }); }
+    else if (!additive) send({ type: 'pick', object: null });
     return;
   }
   if (formOpen() || mode === 'pen') return;
@@ -1080,8 +1082,8 @@ window.addEventListener('keydown', (e) => {
   }
   if (e.target && e.target.tagName === 'INPUT') return;
   const k = e.key.toLowerCase();
-  if ((e.ctrlKey || e.metaKey) && k === 'z') vscode.postMessage({ type: 'command', command: 'cadai.undo' });
-  else if ((e.ctrlKey || e.metaKey) && k === 'y') vscode.postMessage({ type: 'command', command: 'cadai.redo' });
+  if ((e.ctrlKey || e.metaKey) && k === 'z') send({ type: 'command', command: 'cadai.undo' });
+  else if ((e.ctrlKey || e.metaKey) && k === 'y') send({ type: 'command', command: 'cadai.redo' });
   else if (e.key === 'Enter' && mode === 'line') finishLine();
   else if (e.key === 'Backspace' && mode === 'line' && pending) {
     pending.points.pop();
@@ -1100,7 +1102,7 @@ window.addEventListener('keydown', (e) => {
     if (pending || stroke) cancelPending();
     else if (result) clearResult();
     else if (mode !== 'select') setMode('select');
-    else vscode.postMessage({ type: 'pick', object: null });
+    else send({ type: 'pick', object: null });
   }
 });
 
@@ -1119,11 +1121,11 @@ $('vEdges').onclick = () => { showEdges = !showEdges; edgeObjects.forEach((l) =>
 $('vMarkers').onclick = () => { showMarkers = !showMarkers; markerGroup.visible = showMarkers; };
 $('vSection').onclick = cycleSection;
 $('sectionPos').oninput = () => { section.t = Number($('sectionPos').value) / 1000; updateSection(); };
-$('vUndo').onclick = () => vscode.postMessage({ type: 'command', command: 'cadai.undo' });
-$('vRedo').onclick = () => vscode.postMessage({ type: 'command', command: 'cadai.redo' });
-$('vStart').onclick = () => vscode.postMessage({ type: 'command', command: 'cadai.startFreeCAD' });
-$('rVM').onclick = () => vscode.postMessage({ type: 'femField', quantity: 'von_mises' });
-$('rDisp').onclick = () => vscode.postMessage({ type: 'femField', quantity: 'displacement' });
+$('vUndo').onclick = () => send({ type: 'command', command: 'cadai.undo' });
+$('vRedo').onclick = () => send({ type: 'command', command: 'cadai.redo' });
+$('vStart').onclick = () => send({ type: 'command', command: 'cadai.startFreeCAD' });
+$('rVM').onclick = () => send({ type: 'femField', quantity: 'von_mises' });
+$('rDisp').onclick = () => send({ type: 'femField', quantity: 'displacement' });
 $('rClamp').onchange = recolorResult;
 $('rScale').oninput = deformResult;
 $('rClose').onclick = () => { clearResult(); updateHint(); };
@@ -1132,6 +1134,7 @@ $('hClear').onclick = () => { setHighlights([]); $('hBox').classList.add('hidden
 window.addEventListener('message', (e) => {
   const m = e.data;
   if (m.type === 'scene') {
+    viewTarget = m.scene.context || null;
     buildScene(m.scene);
     selectionKeys = new Set((m.scene.selection || []).map((s) => `${s.object}|${s.sub || ''}`));
     paintAll();
@@ -1206,5 +1209,5 @@ window.__cadai = { THREE, camera, renderer, markerGroup, controls, setView, VIEW
 
 setMode('select');
 requestAnimationFrame(loop);
-vscode.postMessage({ type: 'ready', gl: Object.assign(glStart, { attempt: glAttempt, antialias: GL_OPTIONS[glAttempt].antialias,
+send({ type: 'ready', gl: Object.assign(glStart, { attempt: glAttempt, antialias: GL_OPTIONS[glAttempt].antialias,
   software: softwareGl, pixelRatio: quality.ratio }) });

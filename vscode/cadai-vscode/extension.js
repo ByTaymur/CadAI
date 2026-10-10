@@ -5,14 +5,122 @@ const vscode = require('vscode');
 const cp = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { Bridge, BridgeError } = require('./bridge');
+const { Bridge, BridgeError, listBridgeInfos, sessionsDir } = require('./bridge');
 const agents = require('./agents');
 const freecad = require('./freecad');
+const fusionSetup = require('./fusion_setup');
 const mcpSetup = require('./mcp_setup');
 const gpu = require('./gpu');
 const historyTree = require('./history_tree');
 
 const bridge = new Bridge();
+function supports(action) { return !bridge.capabilities || bridge.capabilities.ui_actions.includes(action); }
+
+function assertCurrentView(target) {
+  if (!bridge.context) return;
+  if (['backend_id', 'session_id', 'document_id', 'revision'].some((k) => target[k] !== bridge.context[k])) {
+    throw new BridgeError('CAD modeli veya oturumu değişti. Görünüm yenilendikten sonra işlemi tekrar seçin.', false);
+  }
+}
+
+async function selectCADSession(backend = null) {
+  const sessions = listBridgeInfos().filter((info) => !backend || info.backend_id === backend);
+  const picks = await Promise.all(sessions.map(async (info) => {
+    const probe = new Bridge();
+    try {
+      await probe.select(info);
+      return { label: probe.label, description: probe.context?.document_name || 'Açık belge yok',
+        detail: `Oturum ${info.session_id || info.pid || info.url}`, info };
+    } catch (e) {
+      log(`${probe.label} bağlantı denetimi: ${e.message}`);
+      return { label: `$(warning) ${probe.label}`, description: 'Bağlantı hatası', detail: e.message, error: e.message, info };
+    }
+  }));
+  if (!picks.length) {
+    const errorFile = path.join(path.dirname(sessionsDir()), 'fusion', 'startup-error.log');
+    if (fs.existsSync(errorFile)) log('Fusion başlangıç hatası:\n' + fs.readFileSync(errorFile, 'utf8'));
+    const action = await vscode.window.showWarningMessage(
+      `CadAI: Çalışan ${backend === 'fusion' ? 'Fusion' : 'CAD'} oturumu bulunamadı. Fusion’da Scripts and Add-Ins → Add-Ins → CadAI → Run komutunu çalıştırın.`
+      + (fs.existsSync(errorFile) ? ' Fusion başlangıç hatası CadAI çıktı kanalına yazıldı.' : ''), 'CadAI çıktısını aç');
+    if (action) output.show();
+    return;
+  }
+  const pick = backend && picks.length === 1 ? picks[0]
+    : await vscode.window.showQuickPick(picks, { title: 'İşlem yapılacak CAD oturumunu seçin' });
+  if (!pick) return;
+  if (pick.error) throw new BridgeError(`${pick.info.backend_id} bağlantısı kurulamadı: ${pick.error}`, false);
+  await bridge.select(pick.info);
+  try { await checkFusionVersion(); } catch (e) { log('Fusion sürüm denetimi: ' + e.message); }
+  resetCADView();
+  await poll();
+}
+
+function resetCADView() {
+  state.connected = false;
+  state.doc = state.sel = state.mk = state.hist = -1;
+  state.docName = null;
+  state.markers = [];
+  viewerKeys = [];
+  lastSceneDoc = null;
+  externalStatus = null;
+  // No mcpChanged here: the MCP definition does not depend on the session (auto mode follows it by itself), and
+  // a definition change would restart the agents' server on every reconnect.
+}
+
+function syncFusionAddin(force) {
+  const target = fusionSetup.addinTarget();
+  if (!target) throw new Error('Fusion adaptörü Windows ve macOS içindir.');
+  const out = fusionSetup.syncAddin(path.join(ctx.extensionPath, 'fusion-addon', 'CadAI'), target, { force });
+  log(`Fusion eklentisi: ${out.action} (bu paket ${out.ours}, kurulu ${out.installed || '-'}) ${target}`);
+  return { ...out, target };
+}
+
+// Runs on activation: an update of this extension also updates the Fusion add-in; Fusion loads it on its next start
+// (the add-in runs on startup) or immediately through connectFusionChecked's in-place reload.
+function autoSyncFusionAddin() {
+  try {
+    const out = syncFusionAddin(false);
+    if (out.action === 'newer-installed') {
+      vscode.window.showWarningMessage(`CadAI: Bu VS Code penceresi eski CadAI (${out.ours}) çalıştırıyor; kurulu Fusion eklentisi ${out.installed}. `
+        + 'Komut paletinden "Developer: Reload Window" çalıştırın.', 'Pencereyi yeniden yükle')
+        .then((a) => a && vscode.commands.executeCommand('workbench.action.reloadWindow'));
+    }
+  } catch (e) { log('Fusion eklentisi eşitlenemedi: ' + e.message); }
+}
+
+async function setupFusion() {
+  const out = syncFusionAddin(true);
+  if (out.action === 'newer-installed') {
+    vscode.window.showWarningMessage(`CadAI: Kurulu Fusion eklentisi (${out.installed}) bu VS Code eklentisinden (${out.ours}) yeni; üzerine yazılmadı. `
+      + 'VS Code penceresini yeniden yükleyin (Developer: Reload Window).', 'Pencereyi yeniden yükle')
+      .then((a) => a && vscode.commands.executeCommand('workbench.action.reloadWindow'));
+    return;
+  }
+  const running = listBridgeInfos().some((info) => info.backend_id === 'fusion');
+  const action = await vscode.window.showInformationMessage(running
+    ? `CadAI: Fusion eklentisi ${out.ours} kuruldu. Çalışan Fusion'a bağlanınca kod kendiliğinden yenilenir.`
+    : `CadAI: Fusion eklentisi ${out.ours} kuruldu (${out.target}). Fusion'ı açın; CadAI kendiliğinden başlar. İlk kurulumda Fusion → Scripts and Add-Ins → Add-Ins → CadAI → Run.`,
+  'Klasörü aç', "Fusion'a bağlan");
+  if (action === 'Klasörü aç') await vscode.env.openExternal(vscode.Uri.file(out.target));
+  if (action === "Fusion'a bağlan") await selectCADSession('fusion');
+}
+
+// A Fusion that started before the add-in was updated keeps running the old code. Reload it in place when the
+// running add-in supports that (0.18+); otherwise say exactly what to do instead of failing in odd ways later.
+async function checkFusionVersion() {
+  if (bridge.backend !== 'fusion') return;
+  const ours = fusionSetup.manifestVersion(path.join(ctx.extensionPath, 'fusion-addon', 'CadAI'));
+  const running = (await bridge.health()).version;
+  if (!ours || !running || fusionSetup.compareVersions(running, ours) >= 0) return;
+  syncFusionAddin(false);
+  if (bridge.capabilities?.ui_actions?.includes('reload_addon')) {
+    await bridge.reload();
+    log(`Fusion eklentisi ${running} → ${(await bridge.health()).version} yerinde yenilendi.`);
+    return;
+  }
+  vscode.window.showWarningMessage(`CadAI: Fusion eski CadAI eklentisini (${running}) çalıştırıyor; kurulu sürüm ${ours}. `
+    + 'Fusion → Scripts and Add-Ins → Add-Ins → CadAI: Çalıştır anahtarını kapatıp açın ya da Fusion\'ı yeniden başlatın.');
+}
 let ctx;
 let state = { connected: false, doc: -1, sel: -1, mk: -1, hist: -1, docName: null, markers: [] };
 let statusItem;
@@ -40,6 +148,7 @@ async function guard(fn) {
 // Webviews render data that comes from model files (labels, marker notes). Even though the CSP blocks injected
 // scripts, never let a webview message run an arbitrary VS Code command: only this extension's own commands.
 const WEBVIEW_COMMANDS = new Set([
+  'cadai.selectCADSession', 'cadai.connectFusion', 'cadai.setupFusion',
   'cadai.startFreeCAD', 'cadai.showFreeCAD', 'cadai.openViewer', 'cadai.newDocument', 'cadai.openDocument',
   'cadai.saveDocument', 'cadai.saveDocumentAs', 'cadai.undo', 'cadai.redo', 'cadai.recompute',
   'cadai.measureSelection', 'cadai.exportStep', 'cadai.exportStl', 'cadai.technicalDrawing', 'cadai.openAI', 'cadai.chooseAgent',
@@ -166,15 +275,19 @@ async function setupFreeCAD(interactive) {
 
 // ---------------- MCP server definition (VS Code native API) ----------------
 // VS Code >= 1.101 lets an extension provide MCP servers directly: Copilot agent mode and every other chat
-// extension that uses VS Code's MCP support then sees cadai-freecad without anyone editing mcp.json.
+// extension that uses VS Code's MCP support then sees the cadai server without anyone editing mcp.json.
 
 let nativeMcp = false;
 const mcpChanged = new vscode.EventEmitter();
 
 /** {command, args} that start the MCP server, or null. Prefers the copy installed into FreeCAD. */
 /** CADAI_TOOLSET for small local models (Cline/Continue + Ollama): short tool list and descriptions. */
+// One `cadai` server for every agent: it finds the running CAD program itself (FreeCAD or Fusion), follows the
+// session chosen in VS Code (active-session.json) and switches when the program changes. No session is pinned here,
+// so a restarted FreeCAD/Fusion never leaves agents bound to a dead session.
 function mcpEnv() {
-  return mcpSetup.toolsetEnv(vscode.workspace.getConfiguration('cadai').get('mcp.toolset'));
+  return Object.assign({ CADAI_BACKEND: 'auto' },
+    mcpSetup.toolsetEnv(vscode.workspace.getConfiguration('cadai').get('mcp.toolset')));
 }
 
 async function mcpServerCommand() {
@@ -182,19 +295,19 @@ async function mcpServerCommand() {
   const python = freecad.pythonFor(exe);
   const userDir = exe ? await freecadUserDir(exe) : null;
   const candidates = [userDir && path.join(userDir, 'Mod', 'CadAI', 'mcp_server', 'cadai_mcp.py'),
-    path.join(addonDir(), 'mcp_server', 'cadai_mcp.py')].filter(Boolean);
+    path.join(addonDir(), 'mcp_server', 'cadai_mcp.py'), path.join(bundledAddonDir(), 'mcp_server', 'cadai_mcp.py')].filter(Boolean);
   const server = candidates.find((f) => fs.existsSync(f));
   return python && server ? { command: python, args: [server] } : null;
 }
 
 function registerNativeMcp(context) {
   if (!vscode.lm || typeof vscode.lm.registerMcpServerDefinitionProvider !== 'function' || !vscode.McpStdioServerDefinition) return false;
-  context.subscriptions.push(mcpChanged, vscode.lm.registerMcpServerDefinitionProvider('cadai.freecad', {
+  context.subscriptions.push(mcpChanged, vscode.lm.registerMcpServerDefinitionProvider('cadai.mcp', {
     onDidChangeMcpServerDefinitions: mcpChanged.event,
     provideMcpServerDefinitions: async () => {
       const cmd = await mcpServerCommand();
       if (!cmd) return [];
-      return [new vscode.McpStdioServerDefinition('cadai-freecad', cmd.command, cmd.args, mcpEnv(),
+      return [new vscode.McpStdioServerDefinition(mcpSetup.NAME, cmd.command, cmd.args, mcpEnv(),
         freecad.addonVersion(addonDir()) || ctx.extension.packageJSON.version)];
     },
   }));
@@ -202,29 +315,26 @@ function registerNativeMcp(context) {
 }
 
 async function connectAgents() {
-  const exe = freecadExe();
-  const userDir = await freecadUserDir(exe);
-  if (!exe || !userDir) { await setupFreeCAD(true); return; }
-  const python = freecad.pythonFor(exe);
-  const server = path.join(userDir, 'Mod', 'CadAI', 'mcp_server', 'cadai_mcp.py');
-  if (!python || !fs.existsSync(server)) {
-    vscode.window.showErrorMessage(`CadAI: MCP sunucusu ya da Python bulunamadı (${python || 'python yok'}, ${server}). Önce "FreeCAD eklentisini kur" komutunu çalıştırın.`);
+  const cmd = await mcpServerCommand();
+  if (!cmd) {
+    vscode.window.showErrorMessage('CadAI: MCP sunucusu için Python bulunamadı. FreeCAD\'i kurun (kendi Python\'u kullanılır) ya da Python 3.9+ kurun.');
     return;
   }
+  const python = cmd.command, server = cmd.args[0];
   const installed = new Set(vscode.extensions.all.map((e) => e.id.toLowerCase()));
   const claudeAgent = agentList.find((a) => a.id === 'claude-cli');
   const list = mcpSetup.targets({ userDir: path.resolve(ctx.globalStorageUri.fsPath, '..', '..'),
     claudeCli: claudeAgent && claudeAgent.cliPath, installed, command: python, args: [server], nativeVsCode: nativeMcp,
     env: mcpEnv() });
   const picks = await vscode.window.showQuickPick(list.map((t) => ({ label: t.label, description: t.describe, picked: true, t })),
-    { canPickMany: true, title: 'FreeCAD araçları (cadai-freecad) hangi ajanlara eklensin? Diğer ayarlarınız korunur.' });
+    { canPickMany: true, title: 'CadAI araçları (cadai: açık FreeCAD ya da Fusion kendiliğinden bulunur) hangi ajanlara eklensin? Eski cadai-freecad / cadai-fusion kayıtları kaldırılır; diğer ayarlarınız korunur.' });
   if (!picks || !picks.length) return;
   const done = [], failed = [];
   for (const p of picks) {
     try { p.t.apply(); done.push(p.label); } catch (e) { failed.push(`${p.label}: ${e.message.split('\n')[0]}`); }
   }
   log(`ajanlara bağlandı: ${done.join(', ')}${failed.length ? ' | hatalar: ' + failed.join('; ') : ''}`);
-  if (done.length) vscode.window.showInformationMessage(`CadAI: FreeCAD araçları eklendi → ${done.join(', ')}. Açık ajan pencerelerini yeniden başlatmanız gerekebilir.`);
+  if (done.length) vscode.window.showInformationMessage(`CadAI araçları eklendi → ${done.join(', ')}. Ajan hangi CAD programı açıksa (FreeCAD/Fusion) ona kendiliğinden bağlanır. Açık ajan pencerelerini yeniden başlatmanız gerekebilir.`);
   if (failed.length) vscode.window.showErrorMessage('CadAI: Bazı ajanlara eklenemedi — ' + failed.join(' | '));
 }
 
@@ -238,7 +348,8 @@ async function syncFreeCADAddon() {
   if (versionGreater(source, health.version) && reloadedAddonFor !== source) {
     reloadedAddonFor = source;
     log(`FreeCAD eklentisi ${health.version} → ${source} güncelleniyor`);
-    await bridge.ui('reload_addon');
+    await bridge.reload();
+    resetCADView();
     vscode.window.showInformationMessage(`CadAI: FreeCAD eklentisi ${source} sürümüne güncellendi (FreeCAD kapanmadan).`);
   }
 }
@@ -249,14 +360,21 @@ async function poll() {
   if (polling) return;
   polling = true;
   try {
+    // FreeCAD/Fusion closed or restarted: forget the dead session; the next request connects to whatever runs now.
+    if (bridge.dropDeadSession()) { log('CAD oturumu kapandı; çalışan programa yeniden bağlanılıyor.'); resetCADView(); onConnectionChanged(); }
     const v = await bridge.version();
     if (!state.connected) {
       state.connected = true;
       onConnectionChanged();
-      syncFreeCADAddon().catch((e) => log('eklenti sürüm kontrolü: ' + e.message));
-      setTimeout(() => quietGpuCheck().catch((e) => log('GPU denetimi: ' + e.message)), 8000);
-      syncHistory().catch((e) => log('tasarım geçmişi: ' + e.message));
-      setTimeout(() => syncExternal(), 3000); // finds Blender/OpenSCAD/KiCad/build123d: a few process starts
+      await bridge.bindDocument();
+      log(`${bridge.label} oturumuna bağlanıldı (${bridge.info?.session_id || bridge.info?.url}).`);
+      if (bridge.backend === 'fusion') checkFusionVersion().catch((e) => log('Fusion sürüm denetimi: ' + e.message));
+      if (bridge.backend === 'freecad') {
+        syncFreeCADAddon().catch((e) => log('eklenti sürüm kontrolü: ' + e.message));
+        setTimeout(() => quietGpuCheck().catch((e) => log('GPU denetimi: ' + e.message)), 8000);
+        syncHistory().catch((e) => log('tasarım geçmişi: ' + e.message));
+        setTimeout(() => syncExternal(), 3000);
+      }
     }
     if (v.doc !== state.doc) { state.doc = v.doc; await refreshDocument(); }
     if (v.sel !== state.sel) { state.sel = v.sel; await refreshSelection(); }
@@ -277,15 +395,16 @@ async function poll() {
 
 function onConnectionChanged() {
   if (state.connected) {
-    statusItem.text = `$(circle-filled) CadAI ${ctx.extension.packageJSON.version}: FreeCAD bağlı`;
+    statusItem.text = `$(circle-filled) CadAI ${ctx.extension.packageJSON.version}: ${bridge.label} bağlı`;
     statusItem.command = 'cadai.openViewer';
     statusItem.tooltip = '3B görünümü aç';
   } else {
-    statusItem.text = '$(debug-disconnect) CadAI: FreeCAD kapalı';
-    statusItem.command = 'cadai.startFreeCAD';
-    statusItem.tooltip = 'FreeCAD\'i başlat';
+    statusItem.text = `$(debug-disconnect) CadAI: ${bridge.label} bağlantısı yok`;
+    statusItem.command = 'cadai.selectCADSession';
+    statusItem.tooltip = 'CAD oturumunu seç';
   }
-  post(controls, { type: 'connection', connected: state.connected });
+  post(controls, { type: 'connection', connected: state.connected, backend: bridge.backend, label: bridge.label,
+    capabilities: bridge.capabilities });
   post(viewerPanel && viewerPanel.webview, { type: 'connection', connected: state.connected });
   vscode.commands.executeCommand('setContext', 'cadai.connected', state.connected);
   if (!state.connected) {
@@ -302,21 +421,26 @@ function refreshDocument() {
   return new Promise((resolve) => {
     refreshTimer = setTimeout(async () => {
       try {
+        await bridge.bindDocument();
         const tree = await bridge.ui('tree');
+        for (const w of tree.warnings || []) log(`${w.label} · ${w.operation}: ${w.error}`);
         const docSwitched = tree.active !== state.docName;
         state.docName = tree.active;
         treeProvider.setData(tree);
         post(controls, { type: 'document', tree });
-        if (controls) await refreshRequirements();
+        if (controls && supports('design_requirements')) await refreshRequirements();
         vscode.commands.executeCommand('setContext', 'cadai.hasDocument', !!tree.active);
         if (viewerPanel) await sendScene(false);
         if (docSwitched) {
           await refreshMarkers(); // markers and design history belong to the document
-          await refreshHistory();
+          if (supports('history_status')) await refreshHistory();
         } else {
-          refreshHistoryStatus();
+          if (supports('history_status')) refreshHistoryStatus();
         }
-      } catch (e) { log('belge yenilenemedi: ' + e.message); }
+      } catch (e) {
+        log('belge yenilenemedi: ' + e.message);
+        post(controls, { type: 'documentError', text: e.message });
+      }
       resolve();
     }, 150);
   });
@@ -354,8 +478,8 @@ async function markersToAI() {
     if (m.kind === 'pen') return `#${m.id} kalem izi ${(+m.length).toFixed(1)} mm, yüzler ${(m.faces || []).map((f) => `${f.label || f.object}·${f.element}`).join(', ')}: ${note}`;
     return `#${m.id} ${markerTarget(m.a)}: ${note}`;
   });
-  const text = 'FreeCAD modelinde 3B görünümde koyduğum işaretlere göre değişiklik yap. cadai-freecad MCP '
-    + 'araçlarını kullan: önce get_markers ile işaretlerin ayrıntılarını oku, her işareti sırayla uygula, sonra '
+  const text = `${bridge.label} modelinde 3B görünümde koyduğum işaretlere göre değişiklik yap. cadai MCP `
+    + 'araçlarını kullan (açık program kendiliğinden bulunur; işaretli gövde mesh ise önce convert_mesh ile katıya çevir): önce get_markers ile işaretlerin ayrıntılarını oku, her işareti sırayla uygula, sonra '
     + 'measure ile doğrula ve hangi değişikliğin hangi işarete ait olduğunu söyle.\n\n' + lines.join('\n');
   const agent = currentAgent();
   const how = await agents.open(agent, text, projectDir());
@@ -404,7 +528,7 @@ async function chooseAgent() {
   const pick = await vscode.window.showQuickPick(
     agentList.filter((a) => a.available).map((a) => ({ label: a.label, description: a.detail, id: a.id,
       picked: a.id === currentAgent().id })),
-    { title: 'Yapay zekâ ajanı (hepsi aynı cadai-freecad araçlarını kullanır)' });
+    { title: 'Yapay zekâ ajanı (hepsi aynı cadai araçlarını kullanır)' });
   if (pick) await setAgent(pick.id);
 }
 
@@ -420,22 +544,26 @@ async function sendScene(forceFit) {
   const fit = forceFit || scene.doc !== lastSceneDoc;
   lastSceneDoc = scene.doc;
   viewerKeys = scene.objects.map((o) => o.key).filter(Boolean);
-  post(viewerPanel.webview, { type: 'scene', scene, fit });
+  post(viewerPanel.webview, { type: 'scene', scene: { ...scene, context: bridge.context }, fit });
+  post(controls, { type: 'sceneWarnings', count: (scene.warnings || []).length });
+  for (const w of scene.warnings || []) log(`${w.label} · ${w.element}: ${w.error}`);
   if (scene.stats) log(`sahne ${Date.now() - t0} ms: ${scene.stats.tessellated} yeni, ${scene.stats.unchanged} değişmedi, ${scene.stats.cached} önbellekten`);
 }
 
 function post(target, msg) {
   const webview = target && target.webview ? target.webview : target;
-  if (webview) webview.postMessage(msg);
+  if (webview) webview.postMessage({ ...msg, context: bridge.context });
 }
 
 // ---------------- FreeCAD process ----------------
 
 async function startFreeCAD() {
   if (state.connected) {
-    vscode.window.showInformationMessage('CadAI: FreeCAD zaten bağlı.');
+    vscode.window.showInformationMessage(`CadAI: ${bridge.label} bağlı. FreeCAD'e geçmek için CAD oturumunu seçin.`);
     return;
   }
+  bridge.generation++;
+  bridge.info = bridge.context = bridge.capabilities = null;
   const setup = await setupFreeCAD(false);
   if (!setup) return;
   const exe = setup.exe;
@@ -479,7 +607,9 @@ function openViewer(mode) {
   viewerReady = false;
   viewerKeys = [];
   viewerPanel.onDidDispose(() => { viewerPanel = null; lastSceneDoc = null; viewerReady = false; viewerKeys = []; });
-  viewerPanel.webview.onDidReceiveMessage((m) => guard(async () => {
+  viewerPanel.webview.onDidReceiveMessage((m) => guard(() => bridge.operation(async () => {
+    if (m.target && ['addMarker', 'pick', 'command'].includes(m.type)
+      && !['cadai.selectCADSession', 'cadai.connectFusion', 'cadai.setupFusion', 'cadai.openViewer'].includes(m.command)) assertCurrentView(m.target);
     if (m.type === 'ready') {
       viewerKeys = [];
       if (m.gl) {
@@ -501,10 +631,10 @@ function openViewer(mode) {
       viewerReady = true;
       for (const msg of pendingViewerMessages.splice(0)) post(viewerPanel.webview, msg);
     } else if (m.type === 'addMarker') {
-      const added = await bridge.ui('add_marker', { marker: m.marker });
+      const added = await bridge.ui('add_marker', { marker: m.marker }, 60000, m.target);
       log(`işaret #${added.id} eklendi: ${added.note}`);
     } else if (m.type === 'pick') {
-      await bridge.ui('set_selection', { object: m.object || null, sub: m.sub || '', additive: !!m.additive });
+      await bridge.ui('set_selection', { object: m.object || null, sub: m.sub || '', additive: !!m.additive }, 60000, m.target);
     } else if (m.type === 'command') {
       await runWebviewCommand(m.command);
     } else if (m.type === 'femField') {
@@ -525,7 +655,7 @@ function openViewer(mode) {
       panel.webview.html = webviewHtml(panel.webview, 'viewer'); // a fresh page gets a fresh WebGL context
       viewerReady = false;
     }
-  }));
+  })));
 }
 
 // ---------------- sidebar controls ----------------
@@ -536,23 +666,26 @@ class ControlsProvider {
     view.webview.options = { enableScripts: true, localResourceRoots: [vscode.Uri.joinPath(ctx.extensionUri, 'media')] };
     view.webview.html = webviewHtml(view.webview, 'controls');
     view.onDidDispose(() => { controls = null; });
-    view.webview.onDidReceiveMessage((m) => guard(() => handleControl(m)));
+    view.webview.onDidReceiveMessage((m) => guard(() => bridge.operation(() => handleControl(m))));
   }
 }
 
 async function handleControl(m) {
+  if (m.target && !['ready', 'setAgent', 'viewerMode'].includes(m.cmd)
+    && !['cadai.selectCADSession', 'cadai.connectFusion', 'cadai.setupFusion', 'cadai.openViewer'].includes(m.command)) assertCurrentView(m.target);
   switch (m.cmd) {
     case 'setAgent':
       return setAgent(m.id);
     case 'ready':
       sendAgents();
-      post(controls, { type: 'connection', connected: state.connected });
+      post(controls, { type: 'connection', connected: state.connected, backend: bridge.backend, label: bridge.label,
+        capabilities: bridge.capabilities });
       if (state.connected) {
         post(controls, { type: 'document', tree: await bridge.ui('tree') });
         await refreshSelection();
         await refreshMarkers();
-        await refreshHistoryStatus();
-        await refreshRequirements();
+        if (supports('history_status')) await refreshHistoryStatus();
+        if (supports('design_requirements')) await refreshRequirements();
         if (externalStatus) post(controls, { type: 'external', status: externalStatus });
       }
       return;
@@ -766,7 +899,7 @@ function applyHistoryStatus(st) {
 }
 
 async function syncHistory() {
-  if (!state.connected) return null;
+  if (!state.connected || !supports('history_configure')) return null;
   const st = await bridge.ui('history_configure', { enabled: !!cfg('history.enabled'), folder: historyFolder(),
     notes: cfg('history.notes') !== false });
   applyHistoryStatus(st);
@@ -774,7 +907,7 @@ async function syncHistory() {
 }
 
 async function refreshHistoryStatus() {
-  if (!state.connected) return;
+  if (!state.connected || !supports('history_status')) return;
   try { applyHistoryStatus(await bridge.ui('history_status')); } catch (_) { /* older add-on */ }
 }
 
@@ -1020,7 +1153,9 @@ class TreeProvider {
     it.description = o.type.split('::').pop() + (dims ? ' · ' + dims : '');
     it.tooltip = `${o.name} (${o.type})\n${dims}`;
     it.iconPath = new vscode.ThemeIcon(o.error ? 'error' : (o.visible ? 'symbol-class' : 'eye-closed'));
-    it.contextValue = Object.keys(o.dims || {}).length ? 'cadaiObjectDims' : 'cadaiObject';
+    // Fusion's parameter list is not a body: its dimensions are editable but it cannot be hidden or deleted.
+    it.contextValue = o.type === 'Fusion::Parameters' ? (Object.keys(o.dims || {}).length ? 'cadaiParamsDims' : 'cadaiParams')
+      : Object.keys(o.dims || {}).length ? 'cadaiObjectDims' : 'cadaiObject';
     it.command = { command: 'cadai.tree.select', title: 'Seç', arguments: [node] };
     return it;
   }
@@ -1054,16 +1189,17 @@ async function shapeObjectsForExport() {
   const selected = [...new Set(sel.map((s) => s.object))];
   if (selected.length) return selected;
   const tree = await bridge.ui('tree');
-  return tree.objects.filter((o) => o.visible && /^(Part::|PartDesign::Body)/.test(o.type)).map((o) => o.name);
+  return tree.objects.filter((o) => o.visible && /^(Part::|PartDesign::Body|Fusion::BRepBody|Fusion::MeshBody)/.test(o.type)).map((o) => o.name);
 }
 
 async function exportAs(ext, label) {
+  if (bridge.backend === 'fusion' && ext === 'stl') throw new Error('İlk Fusion adaptörü STEP ve F3D dışa aktarır.');
   const objects = await shapeObjectsForExport();
   if (!objects.length) throw new Error('Dışa aktarılacak parça yok.');
   const file = await pickFile(true, { [label]: [ext] }, `${label} olarak dışa aktar`);
   if (!file) return;
-  const out = await bridge.toolJson('export_model', { objects, path: file });
-  vscode.window.showInformationMessage(`CadAI: ${objects.join(', ')} → ${out.path}`);
+  const out = await bridge.toolJson('export_model', bridge.backend === 'fusion' ? { path: file } : { objects, path: file });
+  vscode.window.showInformationMessage(`CadAI: ${bridge.backend === 'fusion' ? 'Kök bileşenin tamamı' : objects.join(', ')} → ${out.path || out.file}`);
 }
 
 // A3 technical drawing (PDF + PNG) of the selected part, or of the first visible one
@@ -1246,7 +1382,7 @@ async function addPrimitiveCommand() {
     { label: 'Küre', kind: 'sphere', fields: [['radius', 'Yarıçap (mm)', 20]] },
     { label: 'Koni', kind: 'cone', fields: [['radius1', 'Alt yarıçap (mm)', 15], ['radius2', 'Üst yarıçap (mm)', 5], ['height', 'Yükseklik (mm)', 30]] },
   ];
-  const pick = await vscode.window.showQuickPick(kinds, { title: 'Eklenecek şekil' });
+  const pick = await vscode.window.showQuickPick(bridge.backend === 'fusion' ? kinds.slice(0, 2) : kinds, { title: 'Eklenecek şekil' });
   if (!pick) return;
   const params = {};
   for (const [key, prompt, def] of pick.fields) {
@@ -1254,7 +1390,8 @@ async function addPrimitiveCommand() {
     if (v === undefined) return;
     params[key] = Number(v);
   }
-  await bridge.ui('add_primitive', { kind: pick.kind, params });
+  if (bridge.backend === 'fusion') await bridge.toolJson('add_' + pick.kind, params);
+  else await bridge.ui('add_primitive', { kind: pick.kind, params });
 }
 
 async function editDimension(node) {
@@ -1331,7 +1468,9 @@ async function openAI() {
 }
 
 function register(name, fn) {
-  ctx.subscriptions.push(vscode.commands.registerCommand(name, (...a) => guard(() => fn(...a))));
+  const choose = ['cadai.selectCADSession', 'cadai.connectFusion', 'cadai.setupFusion', 'cadai.startFreeCAD'].includes(name);
+  ctx.subscriptions.push(vscode.commands.registerCommand(name, (...a) => guard(() => choose
+    ? bridge.outsideOperation(() => fn(...a)) : bridge.operation(() => fn(...a)))));
 }
 
 // ---------------- webview html ----------------
@@ -1369,6 +1508,10 @@ function activate(context) {
     vscode.window.registerWebviewViewProvider('cadai.controls', new ControlsProvider(), { webviewOptions: { retainContextWhenHidden: true } }));
 
   register('cadai.startFreeCAD', startFreeCAD);
+  register('cadai.selectCADSession', () => selectCADSession());
+  register('cadai.connectFusion', () => selectCADSession('fusion'));
+  register('cadai.setupFusion', setupFusion);
+  autoSyncFusionAddin();
   register('cadai.showFreeCAD', () => bridge.ui('show_freecad'));
   register('cadai.openViewer', async () => openViewer());
   register('cadai.newDocument', async () => {
@@ -1411,8 +1554,9 @@ function activate(context) {
   register('cadai.markersToAI', markersToAI);
   register('cadai.runTests', runTests);
   register('cadai.reloadAddon', async () => {
-    await bridge.ui('reload_addon');
-    vscode.window.showInformationMessage('CadAI: FreeCAD eklentisi yeniden yükleniyor…');
+    await bridge.reload();
+    resetCADView();
+    vscode.window.showInformationMessage(`CadAI: ${bridge.label} eklentisi yeniden yüklendi.`);
   });
   register('cadai.attachDebugger', attachDebugger);
   register('cadai.showFemResult', () => showFemResult('von_mises'));
@@ -1465,7 +1609,7 @@ function activate(context) {
   });
 
   nativeMcp = registerNativeMcp(context);
-  if (nativeMcp) log("MCP sunucusu VS Code'a yerel API ile tanıtıldı (cadai-freecad)");
+  if (nativeMcp) log("MCP sunucusu VS Code'a yerel API ile tanıtıldı (cadai)");
   onConnectionChanged();
   const timer = setInterval(poll, 700);
   const updateTimer = setInterval(checkExtensionUpdate, 15000);

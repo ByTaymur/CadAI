@@ -2,7 +2,7 @@
 
 import os
 
-__version__ = "0.16.2"
+__version__ = "0.19.3"
 
 PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__))
 ADDON_DIR = os.path.dirname(PACKAGE_DIR)

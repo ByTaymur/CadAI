@@ -465,6 +465,46 @@ await check('requirement labels and errors are escaped, controls have no script 
   assert.equal(await controlsPage.evaluate(() => !!window.injected), false);
   assert.deepEqual(controlsErrors, []);
 });
+await check('Fusion connection label, capabilities and empty body explanation match the selected CAD', async () => {
+  await controlsPost({ type: 'connection', connected: true, backend: 'fusion', label: 'Fusion 360',
+    capabilities: { tools: ['measure'], ui_actions: ['tree', 'scene'] } });
+  assert.equal(await controlsPage.textContent('#connText'), 'Fusion 360 bağlı');
+  assert.equal(await controlsPage.locator('[data-command="cadai.undo"]').isDisabled(), true);
+  await controlsPost({ type: 'document', tree: { active: 'fusion-doc', label: 'Model', objects: [
+    { name: 'Parameters', type: 'Fusion::Parameters', visible: true } ] } });
+  assert.match(await controlsPage.textContent('#docInfo'), /0 nesne.*Görünür katı gövde yok/);
+  await controlsPost({ type: 'document', tree: { active: 'fusion-doc', label: 'Model', objects: [
+    { name: 'Body1', type: 'Fusion::BRepBody', visible: true }, { name: 'Parameters', type: 'Fusion::Parameters' } ] } });
+  assert.match(await controlsPage.textContent('#docInfo'), /1 nesne/);
+  assert.doesNotMatch(await controlsPage.textContent('#docInfo'), /Görünür katı/);
+  await controlsPost({ type: 'document', tree: { active: 'fusion-doc', label: 'Assembly', geometry_editable: false,
+    objects: [{ name: 'Instance1', type: 'Fusion::BRepBody', visible: true }] } });
+  assert.match(await controlsPage.textContent('#docInfo'), /1 nesne.*Alt bileşenler: görüntüleme, seçim ve ölçüm/);
+  await controlsPost({ type: 'documentError', text: 'Montaj henüz desteklenmiyor' });
+  assert.match(await controlsPage.textContent('#docInfo'), /Model okunamadı: Montaj henüz desteklenmiyor/);
+  await controlsPost({ type: 'connection', connected: false, backend: 'fusion', label: 'Fusion 360' });
+  assert.equal(await controlsPage.textContent('#connText'), 'Fusion 360 bağlantısı yok');
+  await controlsPost({ type: 'connection', connected: true, backend: 'freecad', label: 'FreeCAD' });
+  assert.equal(await controlsPage.textContent('#connText'), 'FreeCAD bağlı');
+  assert.deepEqual(controlsErrors, []);
+});
+await check('Fusion partial geometry and physical-property failures remain visible without HTML injection', async () => {
+  const error = '<img src=x onerror="window.injected=true">ASM failed';
+  await controlsPage.locator('#docInfo').evaluate((e) => { e.closest('details').open = true; });
+  await controlsPost({ type: 'document', tree: { active: 'fusion-doc', label: 'Assembly',
+    objects: [{ name: 'Instance1', type: 'Fusion::BRepBody', visible: true }], warnings: [{ error }] } });
+  assert.match(await controlsPage.textContent('#docInfo'), /1 hacim hesaplanamadı/);
+  await controlsPost({ type: 'sceneWarnings', count: 2 });
+  assert.equal(await controlsPage.locator('#sceneWarnings').isVisible(), true);
+  assert.match(await controlsPage.textContent('#sceneWarnings'), /2 geometri öğesi çizilemedi/);
+  await controlsPost({ type: 'measure', result: { Instance1: { bbox: { size: [10, 20, 30] },
+    volume_mm3: null, physical_properties_error: error } } });
+  assert.match(await controlsPage.textContent('#measure'), /Fiziksel özellikler hesaplanamadı.*ASM failed/);
+  assert.equal(await controlsPage.locator('#measure img').count(), 0);
+  await controlsPost({ type: 'sceneWarnings', count: 0 });
+  assert.equal(await controlsPage.locator('#sceneWarnings').isVisible(), false);
+  assert.deepEqual(controlsErrors, []);
+});
 await controlsPage.close();
 await browser.close();
 server.close();

@@ -1,4 +1,4 @@
-// AI agents the user can talk to. All of them use the same "cadai-freecad" MCP tools; this module only decides
+// AI agents the user can talk to. All of them use the same "cadai" MCP tools; this module only decides
 // where the conversation happens and how a prepared message (e.g. the marker list) gets there.
 'use strict';
 

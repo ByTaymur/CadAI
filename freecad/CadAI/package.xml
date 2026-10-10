@@ -2,7 +2,7 @@
 <package format="1" xmlns="https://wiki.freecad.org/Package_Metadata">
   <name>CadAI</name>
   <description>AI assistant workbench: show-and-describe markers, chat-driven modeling, FEM (Gmsh + CalculiX) with force-balance and convergence checks, DFM checks, 16k standard STEP parts; optional automatic git design history (Obsidian notes); MCP server for any coding agent; local or cloud models.</description>
-  <version>0.16.2</version>
+  <version>0.19.3</version>
   <date>2026-10-04</date>
   <maintainer>Taymur</maintainer>
   <license file="LICENSE">LGPL-2.1-or-later</license>

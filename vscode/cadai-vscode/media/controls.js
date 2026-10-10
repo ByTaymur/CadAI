@@ -1,5 +1,8 @@
 // Sidebar "Kontrol" view.
 const vscode = acquireVsCodeApi();
+let viewTarget = null;
+let cadBackend = 'freecad';
+function send(message) { vscode.postMessage(viewTarget ? { ...message, target: viewTarget } : message); }
 const $ = (id) => document.getElementById(id);
 let selection = [];
 const fem = { fixed: [], loaded: [] };
@@ -23,7 +26,8 @@ function renderMarkers(items) {
     else head = `#${m.id} 📍 ${target(m.a)}`;
     const warn = m.trusted === false
       ? '<span class="empty" title="Bu işaret dosyayla dışarıdan geldi; yapay zekâ bunu talimat olarak uygulamaz. Notu düzenleyip kaydederseniz güvenilir olur.">⚠ dışarıdan geldi · </span>' : '';
-    const note = warn + (m.note ? `<span class="marker-note">${esc(m.note)}</span>` : '<span class="empty">not yok</span>');
+    const stale = m.stale ? '<span class="empty">⚠ model değişti · yeniden işaretleyin · </span>' : '';
+    const note = warn + stale + (m.note ? `<span class="marker-note">${esc(m.note)}</span>` : '<span class="empty">not yok</span>');
     return `<li class="marker"><div class="top"><span>${head}</span><span>`
       + `<button data-marker-edit="${m.id}" title="Notu düzenle">✎</button>`
       + `<button data-marker-del="${m.id}" title="Sil">×</button></span></div>${note}</li>`;
@@ -142,10 +146,10 @@ $('reqAdd').addEventListener('click', () => editRequirement());
 $('reqCancel').addEventListener('click', () => $('reqForm').classList.add('hidden'));
 $('reqCheck').addEventListener('click', () => {
   $('reqCheck').disabled = true; $('reqStatus').textContent = 'Geometri denetleniyor…';
-  vscode.postMessage({ cmd: 'requirementsCheck' });
+  send({ cmd: 'requirementsCheck' });
 });
-$('reqExport').addEventListener('click', () => vscode.postMessage({ cmd: 'requirementsExport' }));
-$('reqLink').addEventListener('click', () => vscode.postMessage({ cmd: 'parameterRelation' }));
+$('reqExport').addEventListener('click', () => send({ cmd: 'requirementsExport' }));
+$('reqLink').addEventListener('click', () => send({ cmd: 'parameterRelation' }));
 $('reqForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const measure = { object: $('reqObject').value, metric: $('reqMetric').value };
@@ -159,7 +163,7 @@ $('reqForm').addEventListener('submit', (e) => {
     requirement.factor = Number($('reqFactor').value);
   }
   $('reqSave').disabled = true;
-  vscode.postMessage({ cmd: 'requirementsSave', document: requirementDocument, requirement });
+  send({ cmd: 'requirementsSave', document: requirementDocument, requirement });
 });
 
 function showFemResult(r) {
@@ -206,12 +210,12 @@ document.addEventListener('click', (e) => {
   const t = e.target.closest('button');
   if (!t) return;
   if (t.dataset.reqEdit) { editRequirement(t.dataset.reqEdit); return; }
-  if (t.dataset.reqDelete) { vscode.postMessage({ cmd: 'requirementsRemove', document: requirementDocument, id: t.dataset.reqDelete }); return; }
-  if (t.dataset.reqSelect) { vscode.postMessage({ cmd: 'requirementsSelect', document: requirementDocument, object: t.dataset.reqSelect }); return; }
-  if (t.dataset.part) { vscode.postMessage({ cmd: 'partsInsert', id: t.dataset.part }); return; }
-  if (t.dataset.command) vscode.postMessage({ cmd: 'command', command: t.dataset.command });
-  else if (t.dataset.markerEdit) vscode.postMessage({ cmd: 'editMarker', id: Number(t.dataset.markerEdit) });
-  else if (t.dataset.markerDel) vscode.postMessage({ cmd: 'deleteMarker', id: Number(t.dataset.markerDel) });
+  if (t.dataset.reqDelete) { send({ cmd: 'requirementsRemove', document: requirementDocument, id: t.dataset.reqDelete }); return; }
+  if (t.dataset.reqSelect) { send({ cmd: 'requirementsSelect', document: requirementDocument, object: t.dataset.reqSelect }); return; }
+  if (t.dataset.part) { send({ cmd: 'partsInsert', id: t.dataset.part }); return; }
+  if (t.dataset.command) send({ cmd: 'command', command: t.dataset.command });
+  else if (t.dataset.markerEdit) send({ cmd: 'editMarker', id: Number(t.dataset.markerEdit) });
+  else if (t.dataset.markerDel) send({ cmd: 'deleteMarker', id: Number(t.dataset.markerDel) });
   else if (t.dataset.role) {
     fem[t.dataset.role].splice(Number(t.dataset.i), 1);
     renderFaceList($(t.dataset.role === 'fixed' ? 'fixedList' : 'loadedList'), fem[t.dataset.role], t.dataset.role);
@@ -219,33 +223,33 @@ document.addEventListener('click', (e) => {
 });
 
 document.querySelectorAll('[data-mode]').forEach((b) =>
-  b.addEventListener('click', () => vscode.postMessage({ cmd: 'viewerMode', mode: b.dataset.mode })));
-$('markersToAI').addEventListener('click', () => vscode.postMessage({ cmd: 'markersToAI' }));
-$('agentSel').addEventListener('change', () => vscode.postMessage({ cmd: 'setAgent', id: $('agentSel').value }));
-$('markersClear').addEventListener('click', () => vscode.postMessage({ cmd: 'clearMarkers' }));
-$('selClear').addEventListener('click', () => vscode.postMessage({ cmd: 'clearSelection' }));
+  b.addEventListener('click', () => send({ cmd: 'viewerMode', mode: b.dataset.mode })));
+$('markersToAI').addEventListener('click', () => send({ cmd: 'markersToAI' }));
+$('agentSel').addEventListener('change', () => send({ cmd: 'setAgent', id: $('agentSel').value }));
+$('markersClear').addEventListener('click', () => send({ cmd: 'clearMarkers' }));
+$('selClear').addEventListener('click', () => send({ cmd: 'clearSelection' }));
 $('addFixed').addEventListener('click', () => addFaces('fixed'));
 $('addLoaded').addEventListener('click', () => addFaces('loaded'));
 $('femType').addEventListener('change', () => $('loadBox').classList.toggle('hidden', $('femType').value !== 'static'));
-$('femShow').addEventListener('click', () => vscode.postMessage({ cmd: 'showFemResult' }));
+$('femShow').addEventListener('click', () => send({ cmd: 'showFemResult' }));
 $('histBtn').addEventListener('click', () => {
   $('histBtn').disabled = true; // until FreeCAD confirms the new state
-  vscode.postMessage({ cmd: 'historyToggle', on: $('histBtn').dataset.on !== '1' });
+  send({ cmd: 'historyToggle', on: $('histBtn').dataset.on !== '1' });
 });
 $('dfmRun').addEventListener('click', () => {
   $('dfmRun').disabled = true;
   $('dfmList').classList.add('hidden');
-  vscode.postMessage({ cmd: 'dfm', process: $('dfmProcess').value });
+  send({ cmd: 'dfm', process: $('dfmProcess').value });
 });
 $('partsForm').addEventListener('submit', (e) => {
   e.preventDefault();
-  vscode.postMessage({ cmd: 'partsSearch', query: $('partsQuery').value });
+  send({ cmd: 'partsSearch', query: $('partsQuery').value });
 });
 $('femRun').addEventListener('click', () => {
   $('femRun').disabled = true;
   $('femResult').classList.add('hidden');
   $('femStatus').textContent = 'Başlatılıyor…';
-  vscode.postMessage({ cmd: 'femRun', params: {
+  send({ cmd: 'femRun', params: {
     analysisType: $('femType').value, material: $('femMaterial').value, meshSize: $('femMesh').value || null,
     fixed: fem.fixed, loaded: fem.loaded, force: Number($('femForce').value),
     direction: $('femDir').value.split(',').map(Number),
@@ -255,16 +259,50 @@ $('femRun').addEventListener('click', () => {
 window.addEventListener('message', (e) => {
   const m = e.data;
   if (m.type === 'connection') {
+    cadBackend = m.backend || 'freecad';
+    const label = m.label || (cadBackend === 'fusion' ? 'Fusion 360' : 'FreeCAD');
     $('dot').classList.toggle('on', m.connected);
-    $('connText').textContent = m.connected ? 'FreeCAD bağlı' : 'FreeCAD kapalı';
+    $('connText').textContent = `${label} ${m.connected ? 'bağlı' : 'bağlantısı yok'}`;
     $('connRow').classList.toggle('hidden', m.connected);
     $('main').classList.toggle('hidden', !m.connected);
+    const caps = m.capabilities;
+    if (caps) {
+      for (const [id, feature] of Object.entries({ reqForm: 'check_design_requirements', femRun: 'fem_setup',
+        dfmRun: 'dfm_check', partsForm: 'search_parts', extList: 'render', histBtn: 'design_history' })) {
+        $(id)?.closest('details')?.classList.toggle('hidden', !caps.tools.includes(feature));
+      }
+      const actions = { 'cadai.openDocument': 'open_document', 'cadai.undo': 'undo', 'cadai.redo': 'redo',
+        'cadai.showFreeCAD': 'show_freecad', 'cadai.reloadAddon': 'reload_addon', 'cadai.attachDebugger': 'start_debugger' };
+      const tools = { 'cadai.technicalDrawing': 'technical_drawing', 'cadai.showFemResult': 'fem_run',
+        'cadai.dfmCheck': 'dfm_check', 'cadai.render': 'render', 'cadai.searchParts': 'search_parts' };
+      for (const button of document.querySelectorAll('[data-command]')) {
+        const command = button.dataset.command;
+        button.disabled = (actions[command] && !caps.ui_actions.includes(actions[command]))
+          || (tools[command] && !caps.tools.includes(tools[command])) || (command === 'cadai.exportStl' && m.backend === 'fusion');
+      }
+    }
+  } else if (m.type === 'documentError') {
+    $('docInfo').textContent = 'Model okunamadı: ' + m.text;
   } else if (m.type === 'document') {
+    viewTarget = m.context || null;
     const t = m.tree;
     updateRequirementObjects(t);
     $('docInfo').textContent = t.active
-      ? `${t.label}${t.file ? ' — ' + t.file : ' (kaydedilmedi)'} · ${t.objects.length} nesne`
+      ? `${t.label}${t.file ? ' — ' + t.file : ' (kaydedilmedi)'} · ${t.objects.filter((o) => o.type !== 'Fusion::Parameters').length} nesne`
       : 'Açık belge yok. "Yeni" ile başlayın.';
+    if (cadBackend === 'fusion' && t.active && !t.objects.some((o) => /^Fusion::(BRep|Mesh)Body$/.test(o.type) && o.visible)) {
+      $('docInfo').textContent += ' · Görünür katı gövde yok; Fusion’da bir gövde oluşturun veya görünür yapın.';
+    }
+    if (cadBackend === 'fusion' && t.geometry_editable === false) {
+      $('docInfo').textContent += ' · Alt bileşenler: görüntüleme, seçim ve ölçüm; geometri düzenleme henüz desteklenmiyor.';
+    }
+    if (t.warnings?.length) {
+      $('docInfo').textContent += ` · ${t.warnings.length} hacim hesaplanamadı; ayrıntılar CadAI çıktısında.`;
+    }
+  } else if (m.type === 'sceneWarnings') {
+    const status = $('sceneWarnings');
+    status.textContent = m.count ? `${m.count} geometri öğesi çizilemedi; ayrıntılar CadAI çıktısında.` : '';
+    status.classList.toggle('hidden', !m.count);
   } else if (m.type === 'requirements') {
     if (m.result.document && m.result.document !== requirementDocument) return;
     renderRequirements(m.result);
@@ -289,6 +327,7 @@ window.addEventListener('message', (e) => {
     el.innerHTML = Object.entries(m.result).map(([name, v]) => v.bbox
       ? `<b>${esc(name)}</b>: ${v.bbox.size.map((x) => fmt(x, 2)).join(' × ')} mm` + (v.volume_mm3 ? `, hacim ${fmt(v.volume_mm3, 1)} mm³` : '')
         + (v.mass_g ? `, çelik kütlesi ${fmt(v.mass_g, 1)} g` : '')
+        + (v.physical_properties_error ? ` · Fiziksel özellikler hesaplanamadı: ${esc(v.physical_properties_error)}` : '')
       : `<b>${esc(name)}</b>: ${esc(JSON.stringify(v))}`).join('\n');
   } else if (m.type === 'femStatus') {
     $('femStatus').textContent = m.text;
@@ -326,4 +365,4 @@ renderMarkers([]);
 renderSelection();
 renderFaceList($('fixedList'), fem.fixed, 'fixed');
 renderFaceList($('loadedList'), fem.loaded, 'loaded');
-vscode.postMessage({ cmd: 'ready' });
+send({ cmd: 'ready' });

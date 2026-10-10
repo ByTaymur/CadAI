@@ -87,7 +87,8 @@ class ReloadCommand:
             Gui.getMainWindow().removeDockWidget(panel._panel)
             panel._panel.deleteLater()
             panel._panel = None
-        for name in [m for m in sys.modules if m == "cadai" or m.startswith("cadai.")]:
+        for name in [m for m in sys.modules
+                     if m in ("cadai", "cadai_core") or m.startswith(("cadai.", "cadai_core."))]:
             del sys.modules[name]
         import cadai.bridge
         import cadai.gui.panel as new_panel

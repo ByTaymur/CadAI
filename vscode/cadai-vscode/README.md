@@ -1,4 +1,8 @@
-# CadAI — FreeCAD + Yapay Zekâ (VS Code eklentisi)
+# CadAI — CAD + Yapay Zekâ (VS Code eklentisi)
+
+**v0.17.0:** FreeCAD doğrulanmış desteği korur; Fusion 360 adaptörü deneysel olarak eklenmiştir. **CadAI → Fusion 360 eklentisini kur / güncelle (deneysel)** komutuyla eklentiyi hazırlayın, Fusion'ın Scripts and Add-Ins ekranında çalıştırın ve **CAD oturumunu seç** komutundan Fusion'ı seçin. İlk kapsam inceleme, parametre düzenleme, kutu/silindir, delik, yuvarlatma, 3B görünüm/işaretler ve STEP/F3D'dir. Montajlar, FEM, teknik resim ve diğer gelişmiş FreeCAD özellikleri henüz Fusion'da desteklenmez. Gerçek Fusion geometri doğrulaması bekleniyor; paket içindeki `fusion-addon/CadAI/README.md` kapsamı ve doğrulama betiğini açıklar.
+
+**v0.17.2:** Fusion'da alt bileşenlerdeki B-rep gövdeleri de 3B görünümde açılır. Montaj örnekleri konumlarıyla ayrı seçilir ve ölçülür; bileşen hareketleri sahneye yansır. Alt bileşenli belgelerde geometri düzenleme henüz desteklenmez; Fusion desteği gerçek Fusion doğrulaması bekleyen deneysel durumdadır.
 
 Var olan bir parçayı VS Code içinde açar ve üzerinde **göstererek tarif etmenizi** sağlar. Değişiklikleri yapay zekâ yapar, FreeCAD arka planda motor olarak çalışır.
 
@@ -33,7 +37,7 @@ FreeCAD'in kendi ajanı son doğrulamayı geçemediğinde iki düzeltme turu den
 Delik tanıma tam silindirik yüzlerle, kenar uzaklığı dünya eksenlerindeki sınırlayıcı kutuyla sınırlıdır.
 
 ## Hangi yapay zekâ?
-Hangi pencereden çalışıyorsanız onu kullanın. Hepsi aynı `cadai-freecad` MCP araçlarına ve aynı kurallara (`AGENTS.md`) bağlıdır. Seçim için **Kontrol → Yapay zekâ → Ajan** listesini ya da "CadAI: Yapay zekâ ajanını seç" komutunu kullanın; listede yalnızca kurulu olanlar görünür.
+Hangi pencereden çalışıyorsanız onu kullanın. Hepsi aynı `cadai` MCP araçlarına (açık FreeCAD ya da Fusion kendiliğinden bulunur) ve aynı kurallara (`AGENTS.md`) bağlıdır. Seçim için **Kontrol → Yapay zekâ → Ajan** listesini ya da "CadAI: Yapay zekâ ajanını seç" komutunu kullanın; listede yalnızca kurulu olanlar görünür.
 
 | Ajan | İşaretler nasıl gider |
 |---|---|
@@ -48,8 +52,8 @@ MCP sunucusunun tanımlı olduğu yerler:
 - Codex: `~/.codex/config.toml`
 - Cline ve Kilo: kendi MCP ayar dosyaları
 
-Claude Code'da hazır komutlar da gelir: `/mcp__cadai-freecad__apply_markers`, `/mcp__cadai-freecad__fem_check`,
-`/mcp__cadai-freecad__inspect_model`.
+Claude Code'da hazır komutlar da gelir: `/mcp__cadai__apply_markers`, `/mcp__cadai__fem_check`,
+`/mcp__cadai__inspect_model`.
 
 ## Analiz ve üretim
 - **FEM renk haritası:** Statik analiz bitince 3B görünüm, şekil değiştirmiş parçayı von Mises gerilmesi ya da yer

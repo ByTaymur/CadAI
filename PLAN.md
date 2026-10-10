@@ -1,5 +1,7 @@
 # CadAI — Açık Kaynak, Yapay Zekâ Destekli Mühendislik Tasarım Ortamı
 
+> **Güncel yön — 8 Ekim 2026:** CadAI, birden çok CAD programını ortak AI araçları ve VS Code arayüzüyle destekleyen açık kaynak platform olarak geliştiriliyor. FreeCAD doğrulanmış uygulama; Fusion 360 adaptörünün kök parça düzenleme araçları 10 Ekim 2026'da gerçek Fusion'da doğrulandı (0.18.0), montaj doğrulaması bekleniyor; SolidWorks ileriki hedef. [Çoklu CAD mimarisi](docs/multi-cad-architecture.md) bu yön için esas alınır; aşağıdaki ilk fizibilite ve mimari bölümleri tarihsel bağlamdır.
+
 > **Durum:** Plan + ilk uygulama. FreeCAD eklentisi v0.1 yazıldı (Bölüm 12).
 > **Tarih:** 3–5 Ekim 2026 · **Sürüm:** 0.10
 > Netleşmesi gereken konular Bölüm 11'de.
@@ -13,7 +15,7 @@ Mühendislikte yaygın iş akışı üç ticari araca dayanıyor: **SolidWorks**
 - **Hibrit çalışma:** Katı modeller hem doğrudan müdahaleyle (tıklama, ölçü değiştirme) hem de doğal dilde yazılan komutlarla oluşturulup düzenlenir.
 - **Modelden bağımsız yapay zekâ:** Bulut modelleri (Claude, GPT, Gemini) de yerel modeller (Ollama, LM Studio) de bağlanabilir.
 - **Önce hazırı kullan:** Mevcut açık kaynak projeler sıfırdan yeniden yazılmaz; birleştirilir ve geliştirilir.
-- **Ticari araçları kullanmak hedef değil.** Yine de mimari, lisansı olan kullanıcıların bu araçları ileride bağlamasına izin verir.
+- **CAD programından bağımsız araç katmanı:** FreeCAD ve Fusion 360 aynı açık kaynak CadAI platformunda desteklenecek; SolidWorks ve diğer programlar adaptörlerle eklenebilecek. Her programın yerel belge ve parametrik model yapısı korunur. Ticari CAD programları kendi kurulumlarını ve kullanım haklarını gerektirir.
 
 ## 2. Özet ve fizibilite
 
@@ -563,3 +565,94 @@ Analiz tarafında aynı seçim, çözücünün yüz grubuna (sabit mesnet, kuvve
 - Yanıt token sınırı ile ağ zaman aşımı ayrı açıklanır; Ollama uzunluk sınırını bağlam doluluğu gibi göstermeyi bıraktı. Token/bağlam kapasitesi bu değişiklikle kendiliğinden artırılmaz.
 - Süre ağ işlemlerinin bekleme sınırıdır; toplam sohbet süresi veya sunucunun kendi süre sınırını değiştirmez.
 - Doğrulama: FreeCAD değişiklik öncesi/sonrası 54/54; Python MCP + küçük model testleri 48/48 (5 yeni süre/uyarı testi); VS Code 27/27; görünüm 25/25; Ruff ve diff biçim denetimi başarılı.
+
+## v0.17.0 — Çoklu CAD çekirdeği ve ilk Fusion adaptörü (8 Ekim 2026)
+
+- `cadai_core`: CAD API'sinden bağımsız HTTP taşıması, oturum kaydı, araç/yetenek sözleşmesi ve mm tabanlı ortak birimler. FreeCAD adaptörü eski MCP ve arayüz davranışını korur.
+- VS Code'da açık CAD oturumu seçimi; MCP seçilen programa ve oturuma bağlanır. İstekler belge/revizyon kimliği taşır; belge değişmesi, kayıt dosyasının yenilenmesi veya ölçü penceresi açıkken CAD değiştirilmesi işlemi başka modele yönlendirmez. Eklenti yeniden yüklenince yalnızca aynı CAD sürecinin yeni oturumuna bağlanılır.
+- Fusion deneysel eklentisi: 13 araç, belge/parametre/ölçüm/yüz/kenar inceleme, yerel eskiz ve ekstrüzyon, delik ve çap parametresi, yuvarlatma, STEP/F3D; sahne farkları, seçim ve imzalı/eskimiş işaretler. Fusion API çağrıları özel olayla ana iş parçacığına taşınır; zaman aşımına uğrayan kuyruk işi geç çalıştırılmaz.
+- Fusion ilk kapsamı kısıtlıdır: kök bileşendeki parçalar; montaj, pah, Boolean, taşıma, FEM, DFM, teknik resim, CAM, render ve otomatik geri alma henüz desteklenmez. Desteklenmeyen araçlar manifestten ve ilgili arayüz bölümlerinden çıkarılır. SolidWorks adaptörü sonraki aşamadır.
+- Paketler: `vscode/cadai-vscode/dist/cadai-0.17.0.vsix` ve `fusion/dist/CadAI-fusion-0.17.0.zip`; ortak çekirdek iki pakete de eklenir. [Fusion kurulum ve doğrulama](fusion/README.md).
+- Doğrulama: FreeCAD 55/55; Python MCP/küçük model/adaptör 63/63; VS Code birim 36/36; başsız görünüm 25/25; Ruff temiz. Ayrı kullanıcı/veri/köprü klasörleriyle gerçek FreeCAD GUI oturumunda oluşturma, ölçüm, yanlış belge reddi, sahne ve ortak çekirdeğin yeniden yüklenmesi doğrulandı; kullanıcının açık oturumu kullanılmadı.
+- Bu makinede Fusion kurulu değil: gerçek Fusion geometri/performans testi henüz yapılmadı. `fusion/tests/smoke` kendi geçici belgesinde kutu, delik çapı değişimi, yuvarlatma, sahne farkı, işaret ve STEP denetimini sağlar; gerçek sonuç gelmeden Fusion desteği deneysel kalır. Windows dışı CAD kurulumu ve fiziksel GPU matrisi bu turda denenmedi.
+
+## v0.17.1 — Fusion bağlantı durumu ve hata tanılaması (8 Ekim 2026)
+
+- Kontrol panelinin sabit “FreeCAD bağlı” yazısı seçilen programın adına bağlandı. Fusion Parametreler düğümü gövde sayılmaz; görünür gövde yoksa boş 3B görünümün nedeni açıkça yazılır.
+- “Fusion'a bağlan” komutu/düğmesi eklendi; tek Fusion oturumu doğrudan seçilir, birden çok oturumda açık seçim gerekir. Hata veren oturumlar seçim listesinden gizlenmez; hata ayrıntısı ve CadAI çıktı kanalı sunulur. Belge keşfi bekleme sınırı kısaltıldı; HTTP keşif hatası açıklayıcı JSON döndürür.
+- Fusion dosyaları güncel Autodesk `Autodesk Fusion/API/AddIns` klasörüne kopyalanır. Bildirim kopyalama ile Fusion içinde Run yapma adımını açıklar; Stop/Run ile çalışan eski kodun yenilenmesi gerekir. Başlangıç hatası Fusion'da gösterilir ve `CadAI/fusion/startup-error.log` dosyasına kaydedilir; yarım başlayan köprü temizlenir.
+- Doğrulama: FreeCAD 55/55, Python 66/66, VS Code 36/36, başsız arayüz 26/26; yeni testler Fusion başlatma hatası/temizlik, HTTP keşif hatası ve panelde Fusion/FreeCAD geçişi/boş gövde durumunu denetler. Gerçek Fusion çalıştırması bu makinede yapılmadı; deneysel durum sürer.
+
+## v0.17.2 — Fusion alt bileşen görünümü (8 Ekim 2026)
+
+- “Montaj desteği henüz yok” nedeniyle açık belgenin tamamen reddedilmesi kaldırıldı. Kök ve iç içe bileşen B-rep gövdeleri ayrı montaj örnekleri olarak ağaçta/sahnede gösterilir; tekrarlanan parça kimlikleri farklıdır. Gizli örnekler çizilmez.
+- Yerel yüz ağı, kenar çizgisi ve köşe koordinatları `transform2` ile montaj koordinatına bir kez çevrilir. Ölçüm ağırlık merkezi aynı dönüşümü kullanır; ölçülen sınır kutusu vekil gövdenin kök koordinatından alınır. Bileşen konumu/görünürlüğü değişince belge revizyonu ve sahne farkı güncellenir.
+- Bileşen yüz/kenar seçimi ve işaretler montaj örneğini korur. Görünürlük yalnızca ilgili bileşen örneğinin ışığını değiştirir; diğer örneklerin ortak yerel gövdesine yazılmaz. Geometri düzenleme alt bileşenli belgelerde uygulamadan önce reddedilir; bu sınır panelde yazılır. Mesh gövdeleri ve montaj bağlantıları/hareket analizi henüz desteklenmez.
+- Model API erişiminde her gövde için tekrar token çözümlemek yerine geçerli yerel nesne kimlikleri önbelleğe alınır. Zaman aşımı mesajı Fusion diyaloglarının kapatılmasını açıklar. Gerçek Fusion doğrulama betiğine döndürülmüş, tekrarlı ve iç içe bileşen testi eklendi; bu makinede Fusion olmadığı için betik henüz çalıştırılmadı.
+- Fusion'ın Stop/Run sonrasında bellekte tuttuğu eski `adapter` modülü başlangıçta yeniden yüklenir; paket kopyalanınca eski kök-bileşen kısıtının bellekte kalması engellenir.
+- Doğrulama: FreeCAD değişiklik öncesi/sonrası 55/55; Python MCP/küçük model/adaptör 72/72; VS Code 36/36; başsız arayüz 26/26; Ruff ve diff denetimi temiz. Bileşen testleri native Fusion API yerine yerel geometri + kök bağlam vekillerini temsil eden test nesneleri kullanır; gerçek Fusion betiği henüz çalıştırılmadı.
+
+## v0.17.3 — Gerçek Fusion montajında kısmi okuma hataları (8 Ekim 2026)
+
+- Bu bilgisayardaki açık Fusion oturumunda bağlantı, belge kimliği ve yetenek keşfi başarılı. Kullanıcının mevcut montajında salt okunur `tree` çağrısı `ASMInterface::getEntityVolume`, doğrudan `scene` çağrısı boş kenar değerlendiricisi nedeniyle başarısız oldu. Kullanıcının geometrisi değiştirilmedi.
+- Hacim hesabı her gövde için ayrıldı; hata bütün ağaç yerine ilgili gövdede `volume_mm3=null`, hata metni ve uyarı verir. Fiziksel özellik hatasında diğer gövdelerin ölçümleri korunur. Sahne yüz/kenar/köşe hatalarını kimlikleriyle raporlayıp kalan geometriyi iletir; delta yanıtlarında uyarılar korunur. Panelde uyarı sayısı, CadAI çıktısında öğe ve hata ayrıntısı görünür.
+- Doğrulama: FreeCAD değişiklik öncesi/sonrası 55/55; Python 75/75; VS Code 36/36; başsız arayüz 27/27; Ruff temiz. Yeni testler gerçek oturumda gözlenen hacim ve boş değerlendirici hatalarını, kısmi ölçüm/sahne sonuçlarını, delta uyarılarını ve panelin hata metnini güvenli göstermesini kapsar.
+- 0.17.3 VSIX kuruldu ve Fusion'ın mevcut eklenti klasörü güncellendi. Arayüz kontrol aracının native pipe bağlantısı bulunamadığından Fusion Stop/Run kullanıcıya bırakıldı; çalışan oturum halen 0.17.2 olduğu için düzeltilmiş sürümün canlı model doğrulaması bekleniyor. Yerel geometri oluşturma smoke betiği henüz çalıştırılmadı.
+- Takip denetimi: Fusion yeniden başlayan farklı bir oturum yayımladı, ancak hala 0.17.2 çalıştı ve iki okuma hatası tekrarlandı. Kurulum klasöründeki adaptörün SHA-256 değeri açık VS Code'un 0.17.2 paketindeki eski adaptörle aynıydı: eski paket yeni Fusion dosyalarının üstüne yeniden kopyalanmıştı. Fusion klasörü ve bilgisayardaki eski VS Code paketinin yalnızca Fusion dosyaları 0.17.3 kaynaklarıyla eşitlendi; üç kopyanın sürüm ve adaptör hash eşleşmesi denetlendi. Yeniden Stop/Run sonrası canlı doğrulama bekleniyor.
+
+## v0.18.0 — Fusion düzenleme araçları ve gerçek Fusion doğrulaması (10 Ekim 2026)
+
+- Fusion adaptörüne `chamfer_edges` (eşit mesafeli pah), `boolean` (cut/fuse/common, yerel Combine), `move_object` (yerel Move: konum, kaydırma, gövde merkezinden döndürme) ve arayüz geri al/yinele eklendi. `fillet_edges`/`chamfer_edges` FreeCAD'deki gibi `all`/`top`/`bottom`/`vertical`/`horizontal`/`circular` seçicilerini kabul eder; `add_cylinder` `diameter` da alır. Araç adları ve argümanlar FreeCAD ile aynıdır; panel düğmeleri yeteneklerden kendiliğinden açılır.
+- **Gerçek Fusion doğrulaması:** `fusion/tests/live_smoke.py` çalışan Fusion'a köprü üzerinden bağlanır, kendi kaydedilmemiş belgesinde 25 adımı (kutu, delik + çap parametresi, pah, yuvarlatma, silindir, taşıma, Boolean kesme, döndürme, geri al/yinele, sahne farkı, imzalı işaret, STEP) hacim/boyut karşılaştırmasıyla çalıştırır ve belgeyi kaydetmeden kapatır. Bu makinede PASS.
+- Doğrulamanın bulduğu hatalar: `add_box`/`add_cylinder` yardımcı düzlemi gizlerken salt okunur `ConstructionPlane.isVisible`'a yazıyordu (`isLightBulbOn` olmalı) ve yarıçap ölçüsünün yazısını daire merkezine koyuyordu; ikisi 0.17.x'te gerçek Fusion'da hiç çalışmıyordu. Geri al Fusion komutunu olay işleyicisi döndükten sonra çalıştırdığı için eski modeli raporluyordu; artık model değişene kadar `adsk.doEvents` ile beklenir, değişmezse hata döner.
+- Fusion'da geliştirici yeniden yüklemesi (`reload_addon`): adaptör ve ortak çekirdek aynı köprü, oturum ve belge kimlikleriyle yeniden yüklenir; VS Code "Eklentiyi yeniden yükle" yeni oturum aramaz. `fusion/tests/reload_live.py` dosyaları kurulu eklentiye kopyalayıp yeniden yükler. Yalnızca CadAI'nin bu oturumda açtığı kaydedilmemiş belge `close_document` ile kapatılabilir.
+- Ölü oturum kayıtları: Windows'ta MCP keşfi süreç kontrolünü atlıyordu (`os.kill(pid, 0)` Windows'ta süreci sonlandırır); kapanmış FreeCAD'lerden kalan 8 kayıt `cadai-freecad`'i oturum kimliği olmadan "Birden çok CAD oturumu var" hatasıyla durduruyordu. `cadai_core.contract.pid_alive` (Windows'ta `OpenProcess` + `GetExitCodeProcess`) ve köprü başlangıcında `prune_sessions` eklendi; gerçek Fusion başlangıcında 10 eski kayıt temizlendi.
+- Sınır: tek CadAI aracı Fusion'da birden çok geri alma adımı oluşturabilir. Alt bileşenli belgelerde düzenleme hâlâ reddedilir; montaj betiği (`fusion/tests/smoke`) gerçek Fusion'da henüz çalıştırılmadı.
+- Doğrulama: FreeCAD 55/55; Python MCP/küçük model/adaptör 80/80 (5 yeni); VS Code birim 37/37 (1 yeni); başsız görünüm 27/27; Ruff temiz; gerçek Fusion canlı testi PASS; MCP sunucusu `CADAI_BACKEND=fusion` ile canlı oturumda 18 aracı listeledi. Paketler: `vscode/cadai-vscode/dist/cadai-0.18.0.vsix`, `fusion/dist/CadAI-fusion-0.18.0.zip`.
+
+## v0.18.1 — Fusion mesh gövdeleri ve eski paketin üzerine yazma koruması (10 Ekim 2026)
+
+- Kullanıcının Fusion belgesi (içe aktarılmış ağız başlığı) VS Code'da "0 nesne · görünür katı gövde yok" gösteriyordu: parça B-rep değil mesh (üçgen ağ) gövdesiydi ve adaptör yalnızca B-rep gövdeleri okuyordu. Mesh gövdeleri (kök ve alt bileşenlerde) artık ağaçta `Fusion::MeshBody` olarak listelenir, 3B görünümde çizilir, seçilir, gizlenir ve ölçülür (sınır kutusu; hacim üçgenlerden, yalnızca kapalı ağda geçerli). Yüz/kenar araçları ve düzenleme mesh gövdede uygulamadan önce, Fusion'da katıya çevirme önerisiyle reddedilir.
+- Açık VS Code penceresi eski 0.17.3 eklentisini çalıştırırken "Fusion eklentisini kur" kurulu 0.18.0 dosyalarının üstüne 0.17.3 yazdı ve Fusion eski kodla açıldı (0.17.3'te de aynısı olmuştu). Kurulum komutu artık kurulu eklenti daha yeniyse dosyalara dokunmaz ve pencerenin yeniden yüklenmesini söyler.
+- Doğrulama: adaptör testleri 33/33 (yeni: mesh listeleme/sahne/ölçüm/düzenleme reddi); kullanıcının belgesinde canlı doğrulama, Fusion eklentisinin Stop/Run ile yeniden başlatılmasını bekliyor (belge kaydedilmemiş olduğu için Fusion kapatılmadı).
+
+## v0.18.2 — Kendini güncelleyen Fusion kurulumu ve bağlantı dayanıklılığı (10 Ekim 2026)
+
+- Kullanıcıdaki durum: VS Code penceresi yeniden yüklenmediği için 0.17.3 çalışıyordu; "Fusion eklentisini kur" kurulu yeni sürümün üstüne eski dosyaları yazdı, Fusion 0.17.3 ile açıldı. Fusion Stop/Run sonrasında `cadai_core` modüllerini de bellekte eski hâliyle tutuyordu.
+- `fusion_setup.js`: tek eşitleme mantığı. VS Code açılışta Fusion eklentisini kendiliğinden günceller (yalnızca Fusion kuruluysa); kurulu sürüm daha yeniyse asla üzerine yazmaz ve pencerenin yeniden yüklenmesini önerir; eski `__pycache__` silinir, kopya sürümle doğrulanır. Elle "Fusion eklentisini kur" aynı sürümü onarır ama sürüm düşürmez.
+- Bağlanırken çalışan Fusion eklentisi bu paketten eskiyse ve yeniden yüklemeyi destekliyorsa (0.18+) kod yerinde yenilenir; desteklemiyorsa Stop/Run talimatı verilir. Yeniden yükleme sürümü diskteki manifestten alır. Run her seferinde `cadai_core`'u da yeniden yükler.
+- Bağlantı: Fusion `/session` bekleme sınırı 5 → 15 s (köprü), VS Code tarafında 20 s; meşgul Fusion (büyük montaj) artık bağlantı hatası vermez. Parametreler düğümü gizlenemez/silinemez (göz simgesi "Nesne bulunamadı" hatası veriyordu); ölçüleri düzenlenebilir.
+- `import_mesh` aracı (STL/OBJ/3MF → mesh gövdesi); canlı test mesh içe aktarma, ağaç türü, 1000 mm³ hacim ve düzenleme reddini doğrular.
+- Doğrulama: Python 80+ (adaptör 33/33), VS Code birim 41/41 (4 yeni kurulum testi), başsız görünüm 27/27, Ruff temiz.
+
+## v0.19.0 — Ajanlar ve görünüm CAD programını kendiliğinden bulur (10 Ekim 2026)
+
+- İstek: ajan açılınca hangi programa bağlı olduğunu kendisi algılasın, FreeCAD ve Fusion'a otomatik bağlansın. Önceden iki sunucu vardı: `cadai-freecad` (yalnızca FreeCAD) ve `cadai-fusion` (tek bir Fusion oturum kimliğine sabit; Fusion her yeniden başladığında kopuyordu). VS Code görünümü yalnızca FreeCAD'e kendiliğinden bağlanıyordu.
+- MCP sunucusu varsayılan olarak `auto` modda (`cadai`): her istekte çalışan oturumları bulur; öncelik ajanın `cad_select_session` seçimi, sonra VS Code'un seçimi (`sessions/active-session.json`), sonra tek çalışan oturum. Birden çoksa tahmin etmez; çağrı oturum listesi ve `cad_select_session` talimatıyla hata döner. Oturum değişince belge hedefi sıfırlanır (eski programın belgesine işlem gitmez). Arka plan izleyicisi program açılınca/kapanınca/değişince `notifications/tools/list_changed` gönderir; araç listesi bağlı programın manifestidir, hiçbiri yoksa bilinen son araçlar listelenir. `cad_bridge_status` bağlı programı, belgeyi ve bütün oturumları verir (hedefi değiştirmeden). `CADAI_BACKEND=freecad|fusion` eski tek program davranışını korur.
+- VS Code: tek çalışan CAD programına (FreeCAD ya da Fusion) kendiliğinden bağlanır; ikisi açıksa seçimi bekler. Kapanan/yeniden başlayan programın ölü oturumu bırakılır ve çalışana geçilir. Seçim `active-session.json`'a yazılır; ajanlar aynı programı kullanır. Otomatik bağlanmada Fusion sürüm denetimi (gerekirse yerinde yeniden yükleme) de çalışır. MCP tanımı artık oturuma bağlı olmadığından yeniden bağlanmalarda ajan sunucusu yeniden başlatılmaz.
+- "Yapay zekâ ajanlarına bağla": tek `cadai` kaydı (Claude Code, Codex, Cline, Kilo, Roo, VS Code mcp.json); eski `cadai-freecad` ve oturuma sabit `cadai-fusion` kayıtları ve Codex'teki yorum satırları kaldırılır. Ortam değişkeni olmayan eski kayıtlar zaten otomatik moda geçer.
+- Fusion yerinde yeniden yüklemesi oturum kayıt dosyalarındaki sürümü de günceller.
+- Doğrulama: FreeCAD 55/55 (gerçek FreeCAD köprüsünde otomatik mod); Python 83/83 (yeni `test_mcp_auto.py`: gerçek alt süreç, sahte FreeCAD/Fusion köprüleri, list_changed, belirsizlikte çağrının hiçbir programa gitmemesi, seçim, program kapanınca geri dönüş, VS Code seçiminin önceliği); VS Code birim 42/42; başsız görünüm 27/27; Ruff temiz. Gerçek ortam: ortam değişkeni olmadan `cadai` sunucusu açık Fusion'ı ve belgeyi (`MeshBody1`) buldu; çalışan Fusion eklentisi kapatılmadan 0.18.2 → 0.19.0 yükseltildi; gerçek Fusion canlı testi PASS. FreeCAD ve Fusion aynı anda açıkken gerçek programlarla deneme yapılmadı (FreeCAD açık değildi); bu durum alt süreç testinde doğrulandı.
+
+## v0.19.1 — Fusion'da mesh parçayı düzenlenebilir yapma (10 Ekim 2026)
+
+- Kullanıcının durumu: içe aktarılmış mesh gövdesine (MeshBody1) işaretle "tam ortasına M4 delik" istendi; ajan aracı olmadığı için "Fusion'da elle Convert Mesh yapın" dedi. CadAI'nin amacı bu işi kullanıcının yerine yapmak.
+- `convert_mesh` (Fusion Convert Mesh API): `prismatic` (varsayılan; önce Generate Face Groups çalışır, düz/silindirik bölgeler gerçek düzlem/silindir olur), `faceted`, `organic`. Başarısızlıkta bu çağrının eklediği özellikler (yüz grupları, hatalı dönüştürme) zaman çizelgesinden silinir: model yarım kalmaz. Yeni katı gövdenin kimliği, yüz sayısı ve hacmi döner.
+- `scale_object`: yerel Scale özelliğiyle orijinden ölçekleme (yanlış birimle içe aktarılmış mesh için; ajan önce kullanıcıya sormalı).
+- İşaret eskimesi: oturum/revizyon sayacı yerine işaretli gövdenin kendi geometri anahtarı (B-rep `revisionId` + konum; mesh sınır kutusu + konum). Fusion yeniden başlayınca ya da eklenti yeniden yüklenince geometri değişmeden "model değişti · yeniden işaretleyin" çıkıyordu. Eski işaretler yalnızca gövde yoksa eskimiş sayılır.
+- Ajan talimatları: mesh gövdede önce `convert_mesh`; kullanıcıya elle yaptırma. Panelin "Uygulat" metni tek `cadai` sunucusunu anar.
+- Doğrulama: gerçek Fusion canlı testi PASS — STL içe aktar → prismatic dönüştür (6 düzlem yüz, 1000 mm³) → üst yüz merkezine Ø3,3 delik (çıkarılan hacim beklenenle aynı) → ×2 ölçek; Python 83/83, VS Code 42/42, Ruff temiz. Kullanıcının belgesi değiştirilmedi: parça 570 × 950 × 940 mm ölçüldü (ağız başlığı için ~10 kat büyük; muhtemelen cm olarak içe aktarılmış), ölçek kararı kullanıcıya soruldu.
+
+## v0.19.2 — Model değişince donan görünüm ve tek `cadai` adı (10 Ekim 2026)
+
+- Kullanıcıda "düzenleme yapamıyorum": VS Code kaydında her model değişikliğinden sonra "belge yenilenemedi / işaretler alınamadı: Model değişti; eski seçim/işaretle işlem yapılmadı". Görünüm, model değiştiği için yenilenirken okuma isteği eski revizyonu taşıdığından reddediliyordu; ağaç, sahne ve işaretler donuyordu. Revizyon koruması artık yalnızca modeli değiştiren isteklerde uygulanır (`check_target(..., mutates=...)`, `READ_ONLY_UI`); okuma her zaman güncel modeli döndürür. FreeCAD ve Fusion aynı kuralı kullanır. Canlı doğrulama: eski revizyonla ağaç okuma başarılı, eski revizyonla işaret ekleme reddedildi.
+- `convert_mesh` işaretleri yeni katı gövdeye taşır (koordinatlar aynı); yalnızca imzası doğrulanan işaretler yeniden imzalanır, değiştirilmiş/güvenilmeyen işaret aklanmaz.
+- `make_hole` nokta denetimi (`isPointOnFace` find_faces'in verdiği noktayı reddediyordu) yüz değerlendiricisiyle yapılır: `getParameterAtPoint` + `isParameterOnFace` + 1 µm uzaklık (kullanıcının ajanı tarafından yazıldı, canlı testte doğrulandı).
+- Ad: sunucu her modda `cadai`; VS Code sağlayıcı kimliği `cadai.mcp` ("CadAI (FreeCAD / Fusion 360)"). Kullanıcının kayıtları yeniden adlandırıldı: depo `.mcp.json` ve `.vscode/mcp.json`, Claude Code kullanıcı kaydı, Cline, Kilo, Codex (`cadai-freecad` → `cadai`, komutlar aynı). Ajan kuralları ve README'ler güncellendi.
+- Doğrulama: FreeCAD 55/55, Python 84/84, VS Code 42/42, görünüm 27/27, Ruff temiz, gerçek Fusion canlı testi PASS.
+
+## v0.19.3 — Yayın öncesi güvenlik denetimi (10 Ekim 2026)
+
+- Depo ve bütün git geçmişi tarandı: API anahtarı, token, özel anahtar yok. Kişisel yollu `.mcp.json` ve `.vscode/mcp.json` `.gitignore`'da; izlenen dosyalarda kişisel bilgi olarak yalnızca bilinçli bakımcı e-postası ve lisans adı var.
+- Açık giderildi: `cad_select_session` "salt okunur" işaretli ve ajanlarda otomatik onaylıydı. Modeli değiştirmese de sonraki (onaylanan) değişikliklerin hangi CAD programına gideceğini değiştirir; FreeCAD ve Fusion birlikte açıkken model dosyasından gelen bir işaret notu ajanı sessizce öbür programa yönlendirebilirdi. Artık `readOnlyHint=false` ve otomatik onay listesinde değil.
+- Değerlendirilip kabul edilen sınırlar: köprü yalnızca 127.0.0.1 + bearer token + Host denetimi; oturum kayıtları ve `active-session.json` aynı kullanıcı hesabının yazabildiği klasörde (aynı hesapta çalışan kötü amaçlı süreç tehdit modeli dışında); `export_model`/`import_mesh` ajan verdiği yolu kullanır ama yalnızca STEP/F3D yazar, STL/OBJ/3MF okur ve her zaman kullanıcı onayı ister; işaret taşıma yalnızca imzası doğrulanan işaretleri yeniden imzalar.

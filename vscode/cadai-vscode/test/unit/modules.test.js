@@ -27,7 +27,7 @@ test('upsertJson merges and keeps other servers', () => {
   fs.writeFileSync(file, JSON.stringify({ mcpServers: { other: { command: 'x' } }, theme: 'dark' }));
   mcpSetup.upsertJson(file, 'mcpServers', { command: 'py', args: ['s.py'] });
   const obj = JSON.parse(fs.readFileSync(file, 'utf8'));
-  assert.deepEqual(Object.keys(obj.mcpServers).sort(), ['cadai-freecad', 'other']);
+  assert.deepEqual(Object.keys(obj.mcpServers).sort(), ['cadai', 'other']);
   assert.equal(obj.theme, 'dark');
 });
 
@@ -40,7 +40,7 @@ test('a config that cannot be parsed is never overwritten', () => {
 
 test('removeJson drops only our entry', () => {
   const file = path.join(tmp(), 'mcp.json');
-  fs.writeFileSync(file, JSON.stringify({ servers: { 'cadai-freecad': {}, keep: {} } }));
+  fs.writeFileSync(file, JSON.stringify({ servers: { 'cadai': {}, keep: {} } }));
   assert.equal(mcpSetup.removeJson(file, 'servers'), true);
   assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')).servers, { keep: {} });
   assert.equal(mcpSetup.removeJson(file, 'servers'), false);
@@ -48,13 +48,13 @@ test('removeJson drops only our entry', () => {
 
 test('Codex TOML: our table is replaced, everything else is kept', () => {
   const file = path.join(tmp(), 'config.toml');
-  fs.writeFileSync(file, 'model = "gpt"\n\n[mcp_servers.cadai-freecad]\ncommand = \'old\'\n\n[mcp_servers.other]\ncommand = \'o\'\n');
+  fs.writeFileSync(file, 'model = "gpt"\n\n[mcp_servers.cadai]\ncommand = \'old\'\n\n[mcp_servers.other]\ncommand = \'o\'\n');
   mcpSetup.upsertCodexToml(file, "C:\\Program Files\\FreeCAD 1.1\\bin\\python.exe", ['C:\\s.py']);
   const text = fs.readFileSync(file, 'utf8');
   assert.match(text, /model = "gpt"/);
   assert.match(text, /\[mcp_servers\.other\]/);
   assert.doesNotMatch(text, /'old'/);
-  assert.equal((text.match(/\[mcp_servers\.cadai-freecad\]/g) || []).length, 1);
+  assert.equal((text.match(/\[mcp_servers\.cadai\]/g) || []).length, 1);
   assert.match(text, /tool_timeout_sec = 900/);
 });
 
@@ -89,7 +89,7 @@ test('with native VS Code registration the mcp.json target only cleans up an old
   const base = { userDir, claudeCli: null, installed: new Set(), command: 'py', args: ['s.py'] };
   assert.ok(mcpSetup.targets(base).some((t) => t.id === 'vscode'));
   assert.ok(!mcpSetup.targets(Object.assign({ nativeVsCode: true }, base)).some((t) => t.id === 'vscode'));
-  fs.writeFileSync(path.join(userDir, 'mcp.json'), JSON.stringify({ servers: { 'cadai-freecad': { command: 'old' } } }));
+  fs.writeFileSync(path.join(userDir, 'mcp.json'), JSON.stringify({ servers: { 'cadai': { command: 'old' } } }));
   const cleanup = mcpSetup.targets(Object.assign({ nativeVsCode: true }, base)).find((t) => t.id === 'vscode');
   cleanup.apply();
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(userDir, 'mcp.json'), 'utf8')).servers, {});
@@ -132,14 +132,14 @@ test('small-model toolset reaches every agent config as CADAI_TOOLSET', (t) => {
   for (const target of list) target.apply();
   assert.match(fs.readFileSync(path.join(fakeHome, '.codex', 'config.toml'), 'utf8'), /CADAI_TOOLSET = 'small'/);
   const cline = JSON.parse(fs.readFileSync(path.join(userDir, 'globalStorage', 'saoudrizwan.claude-dev', 'settings',
-    'cline_mcp_settings.json'), 'utf8')).mcpServers['cadai-freecad'];
+    'cline_mcp_settings.json'), 'utf8')).mcpServers['cadai'];
   assert.deepEqual(cline.env, { CADAI_TOOLSET: 'small' });
-  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(userDir, 'mcp.json'), 'utf8')).servers['cadai-freecad'].env, env);
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(userDir, 'mcp.json'), 'utf8')).servers['cadai'].env, env);
   const toml = path.join(tmp(), 'config.toml');
   mcpSetup.upsertCodexToml(toml, 'py', ['s.py'], env);
   assert.match(fs.readFileSync(toml, 'utf8'), /env = \{ CADAI_TOOLSET = 'small' \}/);
   const plain = mcpSetup.targets({ userDir: tmp(), claudeCli: null, installed: new Set(['saoudrizwan.claude-dev']), command: 'py', args: [] });
   const plainCline = plain.find((target) => target.id === 'cline');
   plainCline.apply();
-  assert.ok(!('env' in JSON.parse(fs.readFileSync(plainCline.describe, 'utf8')).mcpServers['cadai-freecad']));
+  assert.ok(!('env' in JSON.parse(fs.readFileSync(plainCline.describe, 'utf8')).mcpServers['cadai']));
 });

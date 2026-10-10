@@ -13,7 +13,7 @@ VS Code (Cline / Kilo / Claude Code / Copilot)
 ```
 
 1. **FreeCAD'i açın.** Köprü kendiliğinden başlar. Panelde "● VS Code köprüsü" yazısı görünür; FreeCAD konsolunda da adres yazar.
-2. **VS Code'da ajanı açın.** `cadai-freecad` MCP sunucusu şu dosyalarda tanımlı:
+2. **VS Code'da ajanı açın.** `cadai` MCP sunucusu (açık FreeCAD ya da Fusion 360'ı kendisi bulur) şu dosyalarda tanımlı:
    - Cline: `cline_mcp_settings.json`
    - Kilo Code: `mcp_settings.json`
    - Claude Code: proje kökündeki `.mcp.json`

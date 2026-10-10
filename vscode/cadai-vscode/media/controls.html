@@ -1,4 +1,7 @@
 <div class="status"><span id="dot" class="dot"></span><span id="connText">Bağlanıyor…</span></div>
+<div class="row"><button data-command="cadai.selectCADSession">CAD oturumunu seç</button>
+  <button data-command="cadai.connectFusion">Fusion'a bağlan</button>
+  <button data-command="cadai.setupFusion">Fusion eklentisini kur</button></div>
 <div class="row" id="connRow">
   <button class="primary" data-command="cadai.startFreeCAD">FreeCAD'i başlat</button>
 </div>
@@ -7,6 +10,7 @@
 <details open>
   <summary>Belge</summary>
   <div class="muted" id="docInfo">—</div>
+  <div class="muted hidden" id="sceneWarnings"></div>
   <div class="row">
     <button data-command="cadai.newDocument">Yeni</button>
     <button data-command="cadai.openDocument">Aç</button>

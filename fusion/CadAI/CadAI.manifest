@@ -1,0 +1,9 @@
+{
+  "autodeskProduct": "Fusion360",
+  "type": "addin",
+  "author": "CadAI contributors",
+  "description": {"": "Open-source CadAI bridge: MCP, VS Code model view and markers."},
+  "version": "0.19.3",
+  "runOnStartup": true,
+  "supportedOS": "windows|mac"
+}

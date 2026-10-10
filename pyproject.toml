@@ -1,7 +1,7 @@
 # Tooling only: the FreeCAD add-on is not a pip package (FreeCAD loads it from its Mod folder).
 [project]
 name = "cadai"
-version = "0.16.2"
+version = "0.19.3"
 description = "AI-assisted engineering design in FreeCAD + VS Code: show-and-describe markers, FEM, DFM, MCP."
 license = "LGPL-2.1-or-later"
 requires-python = ">=3.9"  # the MCP server runs on any Python 3.9+; the add-on on FreeCAD's own Python
@@ -20,6 +20,8 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
+"fusion/CadAI/CadAI.py" = ["E402"]  # Fusion resolves the shared core from the checkout or installed bundle
+"fusion/tests/smoke/CadAI-smoke.py" = ["E402"]
 # tests import FreeCAD/cadai after sys.path / config tweaks on purpose
 "freecad/CadAI/tests/*" = ["E402"]
 "vscode/cadai-vscode/test/*" = ["E402"]

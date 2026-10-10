@@ -1,5 +1,6 @@
 # --- build artifacts
 vscode/cadai-vscode/dist/
+fusion/dist/
 __pycache__/
 *.pyc
 

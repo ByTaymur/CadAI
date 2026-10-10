@@ -1,0 +1,8 @@
+{
+  "autodeskProduct": "Fusion360",
+  "type": "script",
+  "author": "CadAI contributors",
+  "description": {"": "Validate CadAI on a separate temporary Fusion document."},
+  "version": "0.17.0",
+  "supportedOS": "windows|mac"
+}

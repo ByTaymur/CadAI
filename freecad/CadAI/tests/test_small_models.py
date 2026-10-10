@@ -11,6 +11,9 @@ from unittest import mock
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "mcp_server"))
+# These suites test the single-program servers; auto mode (default) has its own end-to-end tests.
+os.environ.setdefault("CADAI_BACKEND", "freecad")
+
 
 from cadai import config, prompts
 from cadai.agent import Agent
